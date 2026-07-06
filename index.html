@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&family=Nanum+Pen+Script&family=Jua&family=Do+Hyeon&family=Nanum+Myeongjo:wght@400;700&family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=block" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
   :root{
@@ -52,6 +53,9 @@
   button:disabled{opacity:0.4; cursor:default;}
   button:disabled:hover{background:var(--card); border-color:var(--border);}
   .icon-btn{width:38px; height:38px; padding:0; justify-content:center; font-size:16px; flex-shrink:0;}
+  .material-symbols-outlined{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 22; font-size:20px; line-height:1; vertical-align:-4px; user-select:none;}
+  button.active .material-symbols-outlined{font-variation-settings:'FILL' 1,'wght' 500,'GRAD' 0,'opsz' 22;}
+  .layer-btns .material-symbols-outlined, .layer-drag-handle .material-symbols-outlined{font-size:15px; vertical-align:-3px;}
   .seg-group{display:inline-flex; border:1px solid var(--border); border-radius:10px; overflow:hidden;}
   .seg-group .icon-btn{border:none; border-radius:0; border-right:1px solid var(--border);}
   .seg-group .icon-btn:last-child{border-right:none;}
@@ -76,7 +80,27 @@
   select, input[type=color], input[type=range], input[type=text]{font-family:inherit; font-size:13px; border:1px solid var(--border); border-radius:9px; padding:6px 8px; background:var(--card); color:var(--text);}
   input[type=color]{width:34px; height:34px; padding:2px; cursor:pointer;}
   input[type=range]{padding:0; cursor:pointer;}
-  .sticker-panel, .layer-panel{display:none;}
+  .sticker-panel, .photo-panel{display:none;}
+  .layer-panel{
+    position:fixed; top:120px; right:24px; width:340px; height:420px; min-width:260px; min-height:220px;
+    max-width:90vw; max-height:85vh; z-index:30;
+    background:var(--card); border:1px solid var(--border); border-radius:14px;
+    box-shadow:0 10px 30px rgba(var(--shadow),0.22); overflow:hidden;
+    display:flex; flex-direction:column;
+  }
+  .layer-panel-header{
+    display:flex; align-items:center; gap:6px; padding:10px 12px;
+    border-bottom:1px solid var(--border); cursor:grab; touch-action:none; user-select:none;
+    background:var(--soft); border-radius:14px 14px 0 0; flex-shrink:0;
+  }
+  .layer-panel-title{font-size:13px; font-weight:700; flex:1;}
+  .layer-panel-body{padding:12px; overflow-y:auto; flex:1; min-height:0;}
+  .layer-panel-resize{
+    position:absolute; right:0; bottom:0; width:22px; height:22px;
+    display:flex; align-items:flex-end; justify-content:flex-end; padding:2px;
+    cursor:nwse-resize; touch-action:none; color:var(--muted);
+  }
+  .layer-panel-resize .material-symbols-outlined{font-size:16px; transform:rotate(45deg);}
   .cat-tabs{display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px;}
   .cat-tabs button{padding:5px 12px; font-size:12px;}
   .sticker-grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(42px,1fr)); gap:2px; max-height:130px; overflow-y:auto; background:var(--soft); border-radius:10px; padding:6px;}
@@ -112,7 +136,6 @@
   .frame-color{background:transparent; display:inline-block;}
   .has-shadow{filter:drop-shadow(0 4px 10px rgba(0,0,0,0.18));}
   .el-shape-content{box-sizing:border-box; display:block;}
-  #placeHint{display:none; font-size:12px; color:var(--accent2); margin:-6px 0 10px 2px;}
   #selPanel{display:none; margin-top:12px;}
   .ink-hint{font-size:12px; color:var(--muted);}
   .page-nav{display:flex; align-items:center; justify-content:center; gap:10px; margin-top:14px;}
@@ -123,6 +146,11 @@
   .handle.corner-bl{top:100%; left:0; cursor:nesw-resize;}
   .handle.corner-br{top:100%; left:100%; cursor:nwse-resize;}
   .handle.rotate-handle{top:-30px; left:50%; background:var(--accent); border-color:var(--accent); cursor:grab;}
+  .crop-handle{position:absolute; width:16px; height:16px; background:#fff; border:2px solid var(--accent2); border-radius:50%; touch-action:none;}
+  .crop-handle[data-corner="tl"]{top:0; left:0; transform:translate(-50%,-50%); cursor:nwse-resize;}
+  .crop-handle[data-corner="tr"]{top:0; left:100%; transform:translate(-50%,-50%); cursor:nesw-resize;}
+  .crop-handle[data-corner="bl"]{top:100%; left:0; transform:translate(-50%,-50%); cursor:nesw-resize;}
+  .crop-handle[data-corner="br"]{top:100%; left:100%; transform:translate(-50%,-50%); cursor:nwse-resize;}
   .rotate-line{position:absolute; top:-30px; left:50%; width:1px; height:30px; background:var(--accent2); transform:translateX(-50%); pointer-events:none;}
   .ink-rotate-line.rotate-line{top:50%; left:50%; height:70px; transform:translate(-50%,-100%); pointer-events:none;}
   .handle.rotate-handle.ink-rotate-handle{top:50%; left:50%; transform:translate(-50%,-70px);}
@@ -149,22 +177,26 @@
         <option value="dot">도트</option>
       </select>
       <span class="divider"></span>
-      <button id="addPageBtn" class="icon-btn" title="새 스프레드 추가" aria-label="새 스프레드 추가">＋</button>
-      <button id="delPageBtn" class="icon-btn danger" title="스프레드 삭제" aria-label="스프레드 삭제">🗑</button>
+      <button id="addPageBtn" class="icon-btn" title="새 스프레드 추가" aria-label="새 스프레드 추가"><span class="material-symbols-outlined">add</span></button>
+      <button id="delPageBtn" class="icon-btn danger" title="스프레드 삭제" aria-label="스프레드 삭제"><span class="material-symbols-outlined">delete</span></button>
       <span class="divider"></span>
-      <button id="undoBtn" class="icon-btn" title="실행 취소 (Ctrl+Z)" aria-label="실행 취소">↶</button>
-      <button id="redoBtn" class="icon-btn" title="다시 실행 (Ctrl+Shift+Z)" aria-label="다시 실행">↷</button>
+      <button id="undoBtn" class="icon-btn" title="실행 취소 (Ctrl+Z)" aria-label="실행 취소"><span class="material-symbols-outlined">undo</span></button>
+      <button id="redoBtn" class="icon-btn" title="다시 실행 (Ctrl+Shift+Z)" aria-label="다시 실행"><span class="material-symbols-outlined">redo</span></button>
       <span class="divider"></span>
-      <button id="downloadBtn" class="icon-btn" title="이미지로 저장" aria-label="이미지로 저장">⬇</button>
-      <button id="saveProjectBtn" class="icon-btn" title="프로젝트 파일로 저장" aria-label="프로젝트 파일로 저장">💾</button>
-      <button id="loadProjectBtn" class="icon-btn" title="프로젝트 파일 열기" aria-label="프로젝트 파일 열기">📂</button>
+      <button id="downloadBtn" class="icon-btn" title="이미지로 저장" aria-label="이미지로 저장"><span class="material-symbols-outlined">download</span></button>
+      <button id="saveProjectBtn" class="icon-btn" title="프로젝트 파일로 저장" aria-label="프로젝트 파일로 저장"><span class="material-symbols-outlined">save</span></button>
+      <button id="loadProjectBtn" class="icon-btn" title="프로젝트 파일 열기" aria-label="프로젝트 파일 열기"><span class="material-symbols-outlined">folder_open</span></button>
       <input type="file" id="projectFileInput" accept=".json,application/json" style="display:none;">
-      <span class="divider" id="drawOptionsDivider" style="display:none;"></span>
-      <div id="drawOptions" style="display:none; align-items:center; gap:8px;">
+      <span class="divider"></span>
+      <div id="drawOptions" style="display:flex; align-items:center; gap:8px;">
+        <div class="seg-group" id="eraserTypeGroup">
+          <button id="eraserPixelBtn" class="icon-btn" title="일반 지우개 (부분만 지우기)" aria-label="일반 지우개"><span class="material-symbols-outlined">ink_eraser</span></button>
+          <button id="eraserStrokeBtn" class="icon-btn active" title="획 지우개 (선 전체 삭제)" aria-label="획 지우개"><span class="material-symbols-outlined">layers_clear</span></button>
+        </div>
         <input type="color" id="drawColorInput" value="#5B4636" title="펜 색상" aria-label="펜 색상">
         <input type="range" id="drawWidthInput" min="1" max="30" value="4" style="width:90px;" title="굵기" aria-label="굵기">
-        <button id="clearInkBtn" class="icon-btn" title="현재 그림 레이어 지우기" aria-label="현재 그림 레이어 지우기">🗑</button>
-        <button id="togglePressureCurveBtn" class="icon-btn" title="필압 곡선 설정" aria-label="필압 곡선 설정">🎛</button>
+        <button id="clearInkBtn" class="icon-btn" title="현재 그림 레이어 지우기" aria-label="현재 그림 레이어 지우기"><span class="material-symbols-outlined">delete_sweep</span></button>
+        <button id="togglePressureCurveBtn" class="icon-btn" title="필압 곡선 설정" aria-label="필압 곡선 설정"><span class="material-symbols-outlined">tune</span></button>
       </div>
     </div>
     <div class="row" id="pressureCurvePanel" style="display:none;">
@@ -172,8 +204,8 @@
       <div style="display:flex; flex-direction:column; gap:6px;">
         <span class="ink-hint">가로: 누르는 세기(약함→강함) / 세로: 선 굵기(얇음→굵음)<br>점을 위아래로 드래그해서 곡선을 원하는 대로 바꿀 수 있어요.</span>
         <div class="row">
-          <button id="invertCurveBtn">🔃 반전</button>
-          <button id="resetCurveBtn">↺ 초기화</button>
+          <button id="invertCurveBtn"><span class="material-symbols-outlined">swap_vert</span> 반전</button>
+          <button id="resetCurveBtn"><span class="material-symbols-outlined">restart_alt</span> 초기화</button>
         </div>
       </div>
     </div>
@@ -181,19 +213,19 @@
 
   <div class="left-toolbar">
     <div class="seg-group vertical">
-      <button id="modeSelectBtn" class="icon-btn active" title="이동 / 선택" aria-label="이동">🖐</button>
-      <button id="modePenBtn" class="icon-btn" title="펜 (필압+속도 반영)" aria-label="펜">✏</button>
-      <button id="modeHiBtn" class="icon-btn" title="형광펜" aria-label="형광펜">🖍</button>
-      <button id="modeEraserBtn" class="icon-btn" title="지우개" aria-label="지우개">🧽</button>
+      <button id="modeSelectBtn" class="icon-btn active" title="이동 / 선택" aria-label="이동"><span class="material-symbols-outlined">pan_tool</span></button>
+      <button id="modePenBtn" class="icon-btn" title="펜 (필압+속도 반영)" aria-label="펜"><span class="material-symbols-outlined">ink_pen</span></button>
+      <button id="modeHiBtn" class="icon-btn" title="형광펜" aria-label="형광펜"><span class="material-symbols-outlined">ink_highlighter</span></button>
+      <button id="modeEraserBtn" class="icon-btn" title="지우개" aria-label="지우개"><span class="material-symbols-outlined">ink_eraser</span></button>
     </div>
     <span class="divider-h"></span>
-    <button id="toggleStickerBtn" class="icon-btn" title="스티커" aria-label="스티커">🌟</button>
-    <button id="addPhotoBtn" class="icon-btn" title="사진 추가" aria-label="사진 추가">📷</button>
+    <button id="toggleStickerBtn" class="icon-btn" title="스티커" aria-label="스티커"><span class="material-symbols-outlined">sticky_note_2</span></button>
+    <button id="addPhotoBtn" class="icon-btn" title="사진 (내 파일)" aria-label="사진"><span class="material-symbols-outlined">add_photo_alternate</span></button>
     <input type="file" id="photoInput" accept="image/*" style="display:none;">
-    <button id="addTextBtn" class="icon-btn" title="텍스트 추가" aria-label="텍스트 추가">Aa</button>
-    <button id="addShapeBtn" class="icon-btn" title="도형 추가" aria-label="도형 추가">▭</button>
+    <button id="addTextBtn" class="icon-btn" title="텍스트 추가" aria-label="텍스트 추가"><span class="material-symbols-outlined">text_fields</span></button>
+    <button id="addShapeBtn" class="icon-btn" title="도형 추가" aria-label="도형 추가"><span class="material-symbols-outlined">category</span></button>
     <span class="divider-h"></span>
-    <button id="toggleLayerBtn" class="icon-btn" title="레이어" aria-label="레이어">📚</button>
+    <button id="toggleLayerBtn" class="icon-btn" title="레이어" aria-label="레이어"><span class="material-symbols-outlined">layers</span></button>
   </div>
 
   <div class="panel sticker-panel" id="stickerPanel">
@@ -205,15 +237,30 @@
     <div class="sticker-grid" id="stickerGrid"></div>
   </div>
 
-  <div class="panel layer-panel" id="layerPanel">
-    <div class="row">
-      <button id="addInkLayerBtn">🎨 그림 레이어 추가</button>
-      <span class="ink-hint">선택된 그림 레이어에 펜/형광펜/지우개가 그려져요</span>
+  <div class="panel photo-panel" id="photoPanel">
+    <div class="row" style="margin-bottom:8px;">
+      <button id="uploadPhotoBtn"><span class="material-symbols-outlined">upload_file</span> 파일에서 업로드</button>
+      <span class="ink-hint">내 파일 사용량: <span id="mediaUsageText">-</span> · 캔버스로 이미지를 끌어다 놓아도 돼요</span>
     </div>
-    <div id="layerList"></div>
+    <div class="sticker-grid" id="mediaLibraryGrid" style="grid-template-columns:repeat(auto-fill, minmax(64px,1fr));"></div>
   </div>
 
-  <p id="placeHint">캔버스에서 원하는 위치를 클릭해서 놓아주세요.</p>
+  <div class="layer-panel" id="layerPanel" style="display:none;">
+    <div class="layer-panel-header" id="layerPanelHeader">
+      <span class="material-symbols-outlined" style="font-size:16px;">drag_indicator</span>
+      <span class="layer-panel-title">레이어</span>
+      <button id="closeLayerPanelBtn" class="icon-btn" style="width:26px;height:26px;" title="닫기" aria-label="닫기"><span class="material-symbols-outlined" style="font-size:16px;">close</span></button>
+    </div>
+    <div class="layer-panel-body" id="layerPanelBody">
+      <div class="row">
+        <button id="addInkLayerBtn"><span class="material-symbols-outlined">palette</span> 그림 레이어 추가</button>
+      </div>
+      <span class="ink-hint">선택된 그림 레이어에 펜/형광펜/지우개가 그려져요</span>
+      <div id="layerList"></div>
+    </div>
+    <div class="layer-panel-resize" id="layerPanelResize" title="드래그해서 크기 조절"><span class="material-symbols-outlined">drag_handle</span></div>
+  </div>
+
   <div class="canvas-wrapper">
     <div class="canvas-scaler" id="canvasScaler">
       <div id="pageStage">
@@ -227,9 +274,27 @@
   <div class="panel" id="selPanel"></div>
 
   <div class="page-nav">
-    <button id="prevPageBtn" class="icon-btn">◀</button>
+    <button id="prevPageBtn" class="icon-btn"><span class="material-symbols-outlined">chevron_left</span></button>
     <span id="pageIndicator">1 / 1</span>
-    <button id="nextPageBtn" class="icon-btn">▶</button>
+    <button id="nextPageBtn" class="icon-btn"><span class="material-symbols-outlined">chevron_right</span></button>
+  </div>
+</div>
+
+<div id="cropModalOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:100; align-items:center; justify-content:center;">
+  <div style="background:var(--card); border-radius:16px; padding:16px; display:flex; flex-direction:column; gap:12px; align-items:center;">
+    <div style="position:relative; display:inline-block; line-height:0;" id="cropStage">
+      <img id="cropImage" style="display:block; max-width:78vw; max-height:65vh; user-select:none;" draggable="false">
+      <div id="cropRect" style="position:absolute; border:2px dashed #fff; box-shadow:0 0 0 2000px rgba(0,0,0,0.45); touch-action:none;">
+        <div class="crop-handle" data-corner="tl"></div>
+        <div class="crop-handle" data-corner="tr"></div>
+        <div class="crop-handle" data-corner="bl"></div>
+        <div class="crop-handle" data-corner="br"></div>
+      </div>
+    </div>
+    <div class="row" style="justify-content:flex-end; width:100%;">
+      <button id="cropCancelBtn">취소</button>
+      <button id="cropApplyBtn" class="active"><span class="material-symbols-outlined">crop</span> 자르기 적용</button>
+    </div>
   </div>
 </div>
 
@@ -238,6 +303,67 @@
   var STORAGE_KEY = 'cyberDiaryAppState_v1';
   var THEME_KEY = 'cyberDiaryTheme_v1';
   var PAGE_W = 1588, PAGE_H = 1123, HALF = PAGE_W / 2;
+
+  // ---------- IndexedDB (much larger storage ceiling than localStorage, used for
+  // autosave and the persistent image library so users don't hit a small quota) ----------
+  var IDB_NAME = 'cyberDiaryDB';
+  var IDB_VERSION = 1;
+  var idbPromise = null;
+  function openIDB(){
+    if(idbPromise) return idbPromise;
+    idbPromise = new Promise(function(resolve, reject){
+      if(!window.indexedDB){ reject(new Error('IndexedDB unavailable')); return; }
+      var req = indexedDB.open(IDB_NAME, IDB_VERSION);
+      req.onupgradeneeded = function(e){
+        var db = e.target.result;
+        if(!db.objectStoreNames.contains('state')) db.createObjectStore('state');
+        if(!db.objectStoreNames.contains('media')) db.createObjectStore('media');
+      };
+      req.onsuccess = function(e){ resolve(e.target.result); };
+      req.onerror = function(e){ reject(e); };
+    });
+    return idbPromise;
+  }
+  function idbSet(storeName, key, value){
+    return openIDB().then(function(db){
+      return new Promise(function(resolve, reject){
+        var tx = db.transaction(storeName, 'readwrite');
+        tx.objectStore(storeName).put(value, key);
+        tx.oncomplete = function(){ resolve(); };
+        tx.onerror = function(e){ reject(e); };
+      });
+    });
+  }
+  function idbGet(storeName, key){
+    return openIDB().then(function(db){
+      return new Promise(function(resolve, reject){
+        var tx = db.transaction(storeName, 'readonly');
+        var req = tx.objectStore(storeName).get(key);
+        req.onsuccess = function(){ resolve(req.result); };
+        req.onerror = function(e){ reject(e); };
+      });
+    });
+  }
+  function idbGetAllKeys(storeName){
+    return openIDB().then(function(db){
+      return new Promise(function(resolve, reject){
+        var tx = db.transaction(storeName, 'readonly');
+        var req = tx.objectStore(storeName).getAllKeys();
+        req.onsuccess = function(){ resolve(req.result); };
+        req.onerror = function(e){ reject(e); };
+      });
+    });
+  }
+  function idbDelete(storeName, key){
+    return openIDB().then(function(db){
+      return new Promise(function(resolve, reject){
+        var tx = db.transaction(storeName, 'readwrite');
+        tx.objectStore(storeName).delete(key);
+        tx.oncomplete = function(){ resolve(); };
+        tx.onerror = function(e){ reject(e); };
+      });
+    });
+  }
 
   var categories = [
     {name:'하트', emojis:['💕','💖','💗','💓','💞','❤️','🩷','💘','💝']},
@@ -273,7 +399,7 @@
 
   var currentPage = 0, selectedId = null, mode = 'select';
   var drawColor = '#5B4636', drawWidth = 4, idCounter = 1, scaleFactor = 1;
-  var pendingAdd = null, editingTextId = null;
+  var editingTextId = null;
   var pages = [];
 
   var stage = document.getElementById('pageStage');
@@ -288,7 +414,6 @@
   var drawWidthInput = document.getElementById('drawWidthInput');
   var canvasScaler = document.getElementById('canvasScaler');
   var canvasWrapper = document.querySelector('.canvas-wrapper');
-  var placeHint = document.getElementById('placeHint');
 
   stage.style.width = PAGE_W + 'px';
   stage.style.height = PAGE_H + 'px';
@@ -299,12 +424,6 @@
   foldShade.style.background = 'linear-gradient(90deg, rgba(120,90,60,0) 0%, rgba(120,90,60,0.09) 44%, rgba(120,90,60,0.15) 50%, rgba(120,90,60,0.09) 56%, rgba(120,90,60,0) 100%)';
 
   function curPage(){ return pages[currentPage]; }
-
-  function setPendingAdd(p){
-    pendingAdd = p;
-    placeHint.style.display = p ? 'block' : 'none';
-    stage.style.cursor = p ? 'copy' : (mode === 'select' ? 'default' : 'crosshair');
-  }
 
   // ---------- ink layers ----------
   function pageToLayerLocal(p, layer){
@@ -317,7 +436,7 @@
     return { x: lx + PAGE_W/2, y: ly + PAGE_H/2, pressure: p.pressure, t: p.t };
   }
   function makeInkLayer(){
-    var layer = {id: idCounter++, type:'ink', x: PAGE_W/2, y: PAGE_H/2, rotation: 0};
+    var layer = {id: idCounter++, type:'ink', x: PAGE_W/2, y: PAGE_H/2, rotation: 0, strokes: []};
     var c = document.createElement('canvas');
     c.width = PAGE_W; c.height = PAGE_H;
     c.className = 'ink-canvas';
@@ -327,17 +446,34 @@
     c.addEventListener('pointerdown', function(e){
       if(mode === 'select') return;
       c.setPointerCapture(e.pointerId);
+      if(mode === 'eraser' && eraserSubMode === 'stroke'){
+        isDrawing = true; activeStrokeLayer = layer;
+        eraseStrokesNear(layer, pageToLayerLocal(pointFromEvent(e), layer));
+        return;
+      }
       beginStroke(layer, pageToLayerLocal(pointFromEvent(e), layer));
     });
     c.addEventListener('pointermove', function(e){
       if(!isDrawing || activeStrokeLayer !== layer) return;
+      if(mode === 'eraser' && eraserSubMode === 'stroke'){
+        if(e.getCoalescedEvents){
+          var seEvs = e.getCoalescedEvents();
+          if(seEvs.length){ seEvs.forEach(function(ce){ eraseStrokesNear(layer, pageToLayerLocal(pointFromEvent(ce), layer)); }); return; }
+        }
+        eraseStrokesNear(layer, pageToLayerLocal(pointFromEvent(e), layer));
+        return;
+      }
       if(e.getCoalescedEvents){
         var evs = e.getCoalescedEvents();
         if(evs.length){ evs.forEach(function(ce){ extendStroke(pageToLayerLocal(pointFromEvent(ce), layer)); }); return; }
       }
       extendStroke(pageToLayerLocal(pointFromEvent(e), layer));
     });
-    function up(){ if(activeStrokeLayer === layer) endStroke(); }
+    function up(){
+      if(activeStrokeLayer !== layer) return;
+      if(mode === 'eraser' && eraserSubMode === 'stroke'){ isDrawing = false; activeStrokeLayer = null; commit(); }
+      else { endStroke(); }
+    }
     c.addEventListener('pointerup', up);
     c.addEventListener('pointercancel', up);
     c.addEventListener('pointerleave', up);
@@ -382,6 +518,7 @@
     stage.style.transform = 'scale(' + s + ')';
     canvasScaler.style.width = (PAGE_W * s) + 'px';
     canvasScaler.style.height = (PAGE_H * s) + 'px';
+    if(typeof updateBrushCursor === 'function') updateBrushCursor();
   }
   window.addEventListener('resize', updateScale);
 
@@ -433,8 +570,10 @@
 
   // ---------- cached cutout (traced-outline) canvas for transparent photos ----------
   function getCutoutCanvas(el){
+    var srcImg = el.imgObj;
+    var imgReady = !!(srcImg && srcImg.complete && srcImg.naturalWidth > 0);
     var key = el.frameColor + '|' + el.frameWidth + '|' + el.w + '|' + el.h;
-    if(el._cutoutKey === key && el._cutoutCanvas) return el._cutoutCanvas;
+    if(imgReady && el._cutoutKey === key && el._cutoutCanvas) return el._cutoutCanvas;
     var pad = Math.ceil(Math.max(0, el.frameWidth));
     var canvas = document.createElement('canvas');
     var cw = el.w + pad*2, ch = el.h + pad*2;
@@ -442,8 +581,7 @@
     canvas.style.width = cw + 'px';
     canvas.style.height = ch + 'px';
     var ctx = canvas.getContext('2d');
-    var srcImg = el.imgObj;
-    if(srcImg && srcImg.complete && pad > 0){
+    if(imgReady && pad > 0){
       var sil = document.createElement('canvas'); sil.width = el.w; sil.height = el.h;
       var sctx = sil.getContext('2d');
       sctx.drawImage(srcImg, 0, 0, el.w, el.h);
@@ -463,11 +601,18 @@
         ctx.drawImage(sil, pad + Math.cos(theta2)*pad, pad + Math.sin(theta2)*pad);
       }
       ctx.drawImage(srcImg, pad, pad, el.w, el.h);
-    } else if(srcImg && srcImg.complete){
+    } else if(imgReady){
       ctx.drawImage(srcImg, 0, 0, el.w, el.h);
     }
-    el._cutoutKey = key;
-    el._cutoutCanvas = canvas;
+    if(imgReady){
+      el._cutoutKey = key;
+      el._cutoutCanvas = canvas;
+    } else {
+      // image not loaded yet — do NOT cache this blank result, or it would
+      // stay blank forever even after the image finishes loading
+      el._cutoutKey = null;
+      el._cutoutCanvas = null;
+    }
     return canvas;
   }
 
@@ -512,58 +657,58 @@
     }
   }
 
-  function buildSvgPatternNode(fillType, color1, color2, patternId, scaleFactor2){
+  function buildSvgPatternNode(fillType, color1, color2, patternId, sx, sy){
     var ns = 'http://www.w3.org/2000/svg';
-    var s = scaleFactor2 || 1;
+    sx = sx || 1; sy = sy || 1;
     var pattern = document.createElementNS(ns, 'pattern');
     pattern.setAttribute('id', patternId);
     pattern.setAttribute('patternUnits', 'userSpaceOnUse');
     function rect(x,y,w,h,fill){
       var r = document.createElementNS(ns,'rect');
-      r.setAttribute('x',x*s); r.setAttribute('y',y*s); r.setAttribute('width',w*s); r.setAttribute('height',h*s); r.setAttribute('fill',fill);
+      r.setAttribute('x',x*sx); r.setAttribute('y',y*sy); r.setAttribute('width',w*sx); r.setAttribute('height',h*sy); r.setAttribute('fill',fill);
       return r;
     }
-    function circle(cx,cy,rad,fill){
-      var c = document.createElementNS(ns,'circle');
-      c.setAttribute('cx',cx*s); c.setAttribute('cy',cy*s); c.setAttribute('r',rad*s); c.setAttribute('fill',fill);
+    function ellipse(cx,cy,rad,fill){
+      var c = document.createElementNS(ns,'ellipse');
+      c.setAttribute('cx',cx*sx); c.setAttribute('cy',cy*sy); c.setAttribute('rx',rad*sx); c.setAttribute('ry',rad*sy); c.setAttribute('fill',fill);
       return c;
     }
     var size = 28;
     if(fillType === 'stripe'){
       size = 28;
-      pattern.setAttribute('width', size*s); pattern.setAttribute('height', size*s);
+      pattern.setAttribute('width', size*sx); pattern.setAttribute('height', size*sy);
       pattern.appendChild(rect(0,0,size,size,color2));
       pattern.appendChild(rect(0,0,size,size/2,color1));
     } else if(fillType === 'dot'){
       size = 20;
-      pattern.setAttribute('width', size*s); pattern.setAttribute('height', size*s);
+      pattern.setAttribute('width', size*sx); pattern.setAttribute('height', size*sy);
       pattern.appendChild(rect(0,0,size,size,color2));
-      pattern.appendChild(circle(size/2,size/2,4,color1));
+      pattern.appendChild(ellipse(size/2,size/2,4,color1));
     } else if(fillType === 'polka'){
       size = 38;
-      pattern.setAttribute('width', size*s); pattern.setAttribute('height', size*s);
+      pattern.setAttribute('width', size*sx); pattern.setAttribute('height', size*sy);
       pattern.appendChild(rect(0,0,size,size,color2));
-      pattern.appendChild(circle(size/2,size/2,9,color1));
-      pattern.appendChild(circle(0,0,9,color1));
-      pattern.appendChild(circle(size,0,9,color1));
-      pattern.appendChild(circle(0,size,9,color1));
-      pattern.appendChild(circle(size,size,9,color1));
+      pattern.appendChild(ellipse(size/2,size/2,9,color1));
+      pattern.appendChild(ellipse(0,0,9,color1));
+      pattern.appendChild(ellipse(size,0,9,color1));
+      pattern.appendChild(ellipse(0,size,9,color1));
+      pattern.appendChild(ellipse(size,size,9,color1));
     } else if(fillType === 'star'){
       size = 40;
-      pattern.setAttribute('width', size*s); pattern.setAttribute('height', size*s);
+      pattern.setAttribute('width', size*sx); pattern.setAttribute('height', size*sy);
       pattern.appendChild(rect(0,0,size,size,color2));
       var starPath = 'M0,-6 L1.8,-1.9 L6,-1.9 L2.7,0.7 L4,5 L0,2.3 L-4,5 L-2.7,0.7 L-6,-1.9 L-1.8,-1.9 Z';
       [[10,11,1.1,0],[29,27,0.75,20],[27,7,0.6,-15]].forEach(function(pt){
         var p = document.createElementNS(ns,'path');
         p.setAttribute('d', starPath);
         p.setAttribute('fill', color1);
-        p.setAttribute('transform', 'translate(' + (pt[0]*s) + ',' + (pt[1]*s) + ') scale(' + (pt[2]*s) + ') rotate(' + pt[3] + ')');
+        p.setAttribute('transform', 'translate(' + (pt[0]*sx) + ',' + (pt[1]*sy) + ') scale(' + (pt[2]*sx) + ',' + (pt[2]*sy) + ') rotate(' + pt[3] + ')');
         pattern.appendChild(p);
       });
     } else if(fillType === 'check'){
       size = 28;
       var half = size/2;
-      pattern.setAttribute('width', size*s); pattern.setAttribute('height', size*s);
+      pattern.setAttribute('width', size*sx); pattern.setAttribute('height', size*sy);
       pattern.appendChild(rect(0,0,half,half,color1));
       pattern.appendChild(rect(half,0,half,half,color2));
       pattern.appendChild(rect(0,half,half,half,color2));
@@ -602,6 +747,13 @@
         contentEl.style.position = 'static';
         div.appendChild(contentEl);
         div.style.pointerEvents = (el.id === selectedId) ? 'auto' : 'none';
+        if(el.contentBBox){
+          var bcx = (el.contentBBox.minX + el.contentBBox.maxX) / 2;
+          var bcy = (el.contentBBox.minY + el.contentBBox.maxY) / 2;
+          div.style.transformOrigin = (bcx / PAGE_W * 100) + '% ' + (bcy / PAGE_H * 100) + '%';
+        } else {
+          div.style.transformOrigin = '50% 50%';
+        }
         if(el.id === selectedId && el.contentBBox){
           var bbox = el.contentBBox;
           var outlineDiv = document.createElement('div');
@@ -629,6 +781,16 @@
         contentEl.style.fontFamily = el.fontFamily;
         contentEl.style.fontWeight = el.bold ? '700' : '400';
         contentEl.style.fontStyle = el.italic ? 'italic' : 'normal';
+        contentEl.style.letterSpacing = (el.letterSpacing || 0) + 'px';
+        contentEl.style.lineHeight = String(el.lineHeight || 1.3);
+        contentEl.style.textAlign = el.textAlign || 'center';
+        if(el.boxWidth){
+          contentEl.style.width = el.boxWidth + 'px';
+          contentEl.style.whiteSpace = 'pre-wrap';
+        } else {
+          contentEl.style.width = '';
+          contentEl.style.whiteSpace = 'pre';
+        }
         if(el.outlineWidth > 0){
           contentEl.style.textShadow = buildTextOutlineShadow(el.outlineWidth, el.outlineColor);
         } else {
@@ -674,8 +836,10 @@
           contentEl.appendChild(img);
         }
         contentEl.classList.toggle('has-shadow', !!el.shadow);
+        contentEl.style.transform = 'scaleX(' + (el.flipX ? -1 : 1) + ') scaleY(' + (el.flipY ? -1 : 1) + ')';
         div.appendChild(contentEl);
       } else if(el.type === 'shape'){
+        div.style.opacity = (el.opacity != null ? el.opacity : 1);
         if(el.kind === 'rect' || el.kind === 'ellipse'){
           contentEl = document.createElement('div');
           contentEl.className = 'el-shape-content';
@@ -696,16 +860,19 @@
           var padVBy = strokePadPx * (vbH / el.h);
           contentEl = document.createElementNS(ns, 'svg');
           contentEl.setAttribute('viewBox', (vbX - padVBx) + ' ' + (vbY - padVBy) + ' ' + (vbW + padVBx*2) + ' ' + (vbH + padVBy*2));
+          contentEl.setAttribute('preserveAspectRatio', 'none');
           contentEl.setAttribute('width', svgW);
           contentEl.setAttribute('height', svgH);
           contentEl.style.display = 'block';
           var pathEl = document.createElementNS(ns, 'path');
           pathEl.setAttribute('d', def.path);
-          var vbScale = (vbW / 100) * (el.patternSize || 1);
+          var patScale = el.patternSize || 1;
+          var patSx = (vbW / el.w) * patScale;
+          var patSy = (vbH / el.h) * patScale;
           if(el.fillType && el.fillType !== 'solid' && el.fillType !== 'none'){
             var patId = 'shpat' + el.id;
             var defs = document.createElementNS(ns, 'defs');
-            defs.appendChild(buildSvgPatternNode(el.fillType, el.fillColor, el.fillColor2, patId, vbScale));
+            defs.appendChild(buildSvgPatternNode(el.fillType, el.fillColor, el.fillColor2, patId, patSx, patSy));
             contentEl.appendChild(defs);
             pathEl.setAttribute('fill', 'url(#' + patId + ')');
           } else if(el.fillType === 'none'){
@@ -732,6 +899,28 @@
     updateInkPointerEvents();
   }
 
+  function currentBrushRadius(){
+    if(mode === 'pen') return drawWidth / 2;
+    if(mode === 'highlighter') return (drawWidth*3 + 12) / 2;
+    if(mode === 'eraser') return eraserSubMode === 'stroke' ? 14 : (drawWidth*2 + 14) / 2;
+    return 8;
+  }
+  function buildBrushCursorUrl(radius){
+    var r = Math.max(3, Math.min(60, Math.round(radius)));
+    var c = r + 2;
+    var size = c * 2;
+    var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + size + '" height="' + size + '">' +
+      '<circle cx="' + c + '" cy="' + c + '" r="' + r + '" fill="none" stroke="black" stroke-width="1.4"/>' +
+      '<circle cx="' + c + '" cy="' + c + '" r="' + r + '" fill="none" stroke="white" stroke-width="0.6"/>' +
+      '</svg>';
+    return 'url("data:image/svg+xml,' + encodeURIComponent(svg) + '") ' + c + ' ' + c + ', crosshair';
+  }
+  function updateBrushCursor(){
+    var cp = curPage();
+    if(!cp) return;
+    var url = buildBrushCursorUrl(currentBrushRadius() * scaleFactor);
+    cp.elements.forEach(function(e){ if(e.type === 'ink') e.canvas.style.cursor = url; });
+  }
   function updateInkPointerEvents(){
     var activeInk = peekActiveInkLayer();
     curPage().elements.forEach(function(e){
@@ -739,6 +928,7 @@
         e.canvas.style.pointerEvents = (mode !== 'select' && activeInk && e.id === activeInk.id) ? 'auto' : 'none';
       }
     });
+    updateBrushCursor();
   }
 
   function selectElement(id){ selectedId = id; renderElements(); renderSelPanel(); renderLayerPanel(); }
@@ -773,10 +963,25 @@
     var start = toInternal(e.clientX, e.clientY);
     var startX = el.x, startY = el.y;
     var moved = false;
+    var bboxCx = PAGE_W/2, bboxCy = PAGE_H/2;
+    if(el.type === 'ink' && el.contentBBox){
+      bboxCx = (el.contentBBox.minX + el.contentBBox.maxX) / 2;
+      bboxCy = (el.contentBBox.minY + el.contentBBox.maxY) / 2;
+    }
     function onMove(ev){
       var p = toInternal(ev.clientX, ev.clientY);
-      var nx = Math.min(PAGE_W, Math.max(0, startX + (p.x - start.x)));
-      var ny = Math.min(PAGE_H, Math.max(0, startY + (p.y - start.y)));
+      var nx = startX + (p.x - start.x);
+      var ny = startY + (p.y - start.y);
+      if(el.type === 'ink'){
+        var deltaX = nx - PAGE_W/2, deltaY = ny - PAGE_H/2;
+        var bboxPageX = Math.min(PAGE_W, Math.max(0, bboxCx + deltaX));
+        var bboxPageY = Math.min(PAGE_H, Math.max(0, bboxCy + deltaY));
+        nx = bboxPageX - bboxCx + PAGE_W/2;
+        ny = bboxPageY - bboxCy + PAGE_H/2;
+      } else {
+        nx = Math.min(PAGE_W, Math.max(0, nx));
+        ny = Math.min(PAGE_H, Math.max(0, ny));
+      }
       if(!moved && (Math.abs(nx - el.x) > 1.5 || Math.abs(ny - el.y) > 1.5)){
         moved = true;
         if(!captured){ div.setPointerCapture(pointerId); captured = true; }
@@ -916,7 +1121,8 @@
     curPage().elements.push(el); selectElement(el.id); commit();
   }
   function addTextAt(x,y){
-    var el = {id:idCounter++, type:'text', text:'', color:'#4A3B2A', fontSize:32, fontFamily:fontOptions[0].value, bold:false, italic:false, outlineColor:'#FFFFFF', outlineWidth:0, x:x, y:y, rotation:0};
+    var el = {id:idCounter++, type:'text', text:'', color:'#4A3B2A', fontSize:32, fontFamily:fontOptions[0].value, bold:false, italic:false,
+      outlineColor:'#FFFFFF', outlineWidth:0, letterSpacing:0, lineHeight:1.3, textAlign:'center', boxWidth:null, x:x, y:y, rotation:0};
     curPage().elements.push(el);
     editingTextId = el.id;
     selectElement(el.id);
@@ -924,16 +1130,20 @@
     if(fresh) fresh.focus();
     commit();
   }
-  function addPhoto(dataUrl, nw, nh, imgObj){
+  function addPhotoAt(dataUrl, nw, nh, imgObj, x, y){
     var maxDim = 400;
     var ratio = Math.min(maxDim/nw, maxDim/nh, 1);
     var w = Math.round(nw*ratio), h = Math.round(nh*ratio);
-    var el = {id:idCounter++, type:'photo', src:dataUrl, imgObj:imgObj, w:w, h:h, x:PAGE_W/2, y:PAGE_H/2, rotation:0, frame:'none', frameColor:'#ff6fa5', frameWidth:8, shadow:true};
+    var el = {id:idCounter++, type:'photo', src:dataUrl, imgObj:imgObj, w:w, h:h,
+      x: x != null ? Math.min(PAGE_W, Math.max(0, x)) : PAGE_W/2,
+      y: y != null ? Math.min(PAGE_H, Math.max(0, y)) : PAGE_H/2,
+      rotation:0, frame:'none', frameColor:'#ffffff', frameWidth:8, shadow:true, flipX:false, flipY:false};
     curPage().elements.push(el); selectElement(el.id); commit();
   }
+  function addPhoto(dataUrl, nw, nh, imgObj){ addPhotoAt(dataUrl, nw, nh, imgObj); }
   function addShapeAt(x,y){
     var el = {id:idCounter++, type:'shape', kind:'rect', x:x, y:y, w:220, h:140, rotation:0, radius:16,
-      fillType:'solid', fillColor:'#ffd9e8', fillColor2:'#ffffff', patternSize:1, strokeColor:'#ff6fa5', strokeWidth:0};
+      fillType:'solid', fillColor:'#ffd9e8', fillColor2:'#ffffff', patternSize:1, strokeColor:'#ffffff', strokeWidth:0, opacity:1};
     curPage().elements.push(el); selectElement(el.id); commit();
   }
 
@@ -950,22 +1160,46 @@
         var row = document.createElement('div');
         row.className = 'layer-row' + (el.id === selectedId ? ' active' : '');
         row.draggable = true;
-        var handle = document.createElement('span'); handle.className = 'layer-drag-handle'; handle.textContent = '⠿'; handle.title = '드래그해서 순서 바꾸기';
+        var handle = document.createElement('span'); handle.className = 'layer-drag-handle'; handle.innerHTML = '<span class="material-symbols-outlined">drag_indicator</span>'; handle.title = '드래그해서 순서 바꾸기';
         row.appendChild(handle);
         var thumb = document.createElement('div'); thumb.className = 'layer-thumb';
         var label = document.createElement('span'); label.className = 'layer-name';
-        if(el.type === 'ink'){ thumb.textContent = '🎨'; label.textContent = '그림 레이어'; }
-        else if(el.type === 'sticker'){ thumb.textContent = el.emoji; label.textContent = '스티커'; }
-        else if(el.type === 'text'){ thumb.textContent = 'Aa'; label.textContent = (el.text || '텍스트') .slice(0,16); }
-        else if(el.type === 'photo'){ var im=document.createElement('img'); im.src=el.src; thumb.appendChild(im); label.textContent = '사진'; }
-        else if(el.type === 'shape'){ thumb.textContent = shapeGlyph(el.kind); label.textContent = '도형'; }
+        var defaultLabel;
+        if(el.type === 'ink'){ thumb.innerHTML = '<span class="material-symbols-outlined">palette</span>'; defaultLabel = '그림 레이어'; }
+        else if(el.type === 'sticker'){ thumb.textContent = el.emoji; defaultLabel = '스티커'; }
+        else if(el.type === 'text'){ thumb.textContent = 'Aa'; defaultLabel = (el.text || '텍스트').slice(0,16); }
+        else if(el.type === 'photo'){ var im=document.createElement('img'); im.src=el.src; thumb.appendChild(im); defaultLabel = '사진'; }
+        else if(el.type === 'shape'){ thumb.textContent = shapeGlyph(el.kind); defaultLabel = '도형'; }
+        label.textContent = el.name || defaultLabel;
         row.appendChild(thumb); row.appendChild(label);
         var btns = document.createElement('div'); btns.className = 'layer-btns';
-        var upBtn = document.createElement('button'); upBtn.textContent='▲'; upBtn.title='앞으로';
+        var renameBtn = document.createElement('button'); renameBtn.innerHTML = '<span class="material-symbols-outlined">edit</span>'; renameBtn.title='이름 바꾸기';
+        renameBtn.addEventListener('click', function(e){
+          e.stopPropagation();
+          var input = document.createElement('input');
+          input.type = 'text';
+          input.value = el.name || defaultLabel;
+          input.style.width = '100%'; input.style.fontSize = '13px';
+          input.addEventListener('click', function(ev){ ev.stopPropagation(); });
+          input.addEventListener('keydown', function(ev){
+            ev.stopPropagation();
+            if(ev.key === 'Enter'){ ev.preventDefault(); input.blur(); }
+          });
+          input.addEventListener('blur', function(){
+            var val = input.value.trim();
+            el.name = val ? val : null;
+            renderLayerPanel();
+            commit();
+          });
+          label.replaceWith(input);
+          input.focus();
+          input.select();
+        });
+        var upBtn = document.createElement('button'); upBtn.innerHTML = '<span class="material-symbols-outlined">arrow_upward</span>'; upBtn.title='앞으로';
         upBtn.addEventListener('click', function(e){ e.stopPropagation(); moveLayer(el.id, 1); });
-        var downBtn = document.createElement('button'); downBtn.textContent='▼'; downBtn.title='뒤로';
+        var downBtn = document.createElement('button'); downBtn.innerHTML = '<span class="material-symbols-outlined">arrow_downward</span>'; downBtn.title='뒤로';
         downBtn.addEventListener('click', function(e){ e.stopPropagation(); moveLayer(el.id, -1); });
-        var delBtn = document.createElement('button'); delBtn.textContent='🗑'; delBtn.title='삭제';
+        var delBtn = document.createElement('button'); delBtn.innerHTML = '<span class="material-symbols-outlined">delete</span>'; delBtn.title='삭제';
         delBtn.addEventListener('click', function(e){
           e.stopPropagation();
           curPage().elements = curPage().elements.filter(function(x){ return x.id !== el.id; });
@@ -973,9 +1207,12 @@
           renderElements(); renderSelPanel(); renderLayerPanel();
           commit();
         });
-        btns.appendChild(upBtn); btns.appendChild(downBtn); btns.appendChild(delBtn);
+        btns.appendChild(renameBtn); btns.appendChild(upBtn); btns.appendChild(downBtn); btns.appendChild(delBtn);
         row.appendChild(btns);
-        row.addEventListener('click', function(){ selectedId = el.id; renderElements(); renderSelPanel(); renderLayerPanel(); });
+        row.addEventListener('click', function(){
+          if(selectedId === el.id) return;
+          selectedId = el.id; renderElements(); renderSelPanel(); renderLayerPanel();
+        });
         row.addEventListener('dragstart', function(e){
           e.dataTransfer.setData('text/plain', String(el.id));
           e.dataTransfer.effectAllowed = 'move';
@@ -1022,12 +1259,74 @@
     renderElements(); renderLayerPanel();
     commit();
   }
+  function closeOtherPanels(exceptId){
+    ['stickerPanel','photoPanel'].forEach(function(id){
+      if(id !== exceptId) document.getElementById(id).style.display = 'none';
+    });
+  }
   document.getElementById('toggleLayerBtn').addEventListener('click', function(){
     var p = document.getElementById('layerPanel');
-    p.style.display = p.style.display === 'block' ? 'none' : 'block';
-    if(p.style.display === 'block') renderLayerPanel();
+    var show = p.style.display !== 'flex';
+    p.style.display = show ? 'flex' : 'none';
+    if(show) renderLayerPanel();
   });
+  document.getElementById('closeLayerPanelBtn').addEventListener('click', function(){
+    document.getElementById('layerPanel').style.display = 'none';
+  });
+  (function(){
+    var panel = document.getElementById('layerPanel');
+    var header = document.getElementById('layerPanelHeader');
+    header.addEventListener('pointerdown', function(e){
+      if(e.target.closest('button')) return;
+      e.preventDefault();
+      header.setPointerCapture(e.pointerId);
+      var rect = panel.getBoundingClientRect();
+      var startX = e.clientX, startY = e.clientY;
+      var startLeft = rect.left, startTop = rect.top;
+      panel.style.right = 'auto';
+      panel.style.left = startLeft + 'px';
+      panel.style.top = startTop + 'px';
+      function onMove(ev){
+        var nx = startLeft + (ev.clientX - startX);
+        var ny = startTop + (ev.clientY - startY);
+        nx = Math.max(0, Math.min(window.innerWidth - 60, nx));
+        ny = Math.max(0, Math.min(window.innerHeight - 40, ny));
+        panel.style.left = nx + 'px';
+        panel.style.top = ny + 'px';
+      }
+      function onUp(){
+        header.removeEventListener('pointermove', onMove);
+        header.removeEventListener('pointerup', onUp);
+      }
+      header.addEventListener('pointermove', onMove);
+      header.addEventListener('pointerup', onUp);
+    });
+  })();
   document.getElementById('addInkLayerBtn').addEventListener('click', addInkLayer);
+  (function(){
+    var panel = document.getElementById('layerPanel');
+    var resizeHandle = document.getElementById('layerPanelResize');
+    resizeHandle.addEventListener('pointerdown', function(e){
+      e.preventDefault();
+      e.stopPropagation();
+      resizeHandle.setPointerCapture(e.pointerId);
+      var rect = panel.getBoundingClientRect();
+      var startW = rect.width, startH = rect.height;
+      var startX = e.clientX, startY = e.clientY;
+      function onMove(ev){
+        var w = Math.max(260, Math.min(window.innerWidth*0.9, startW + (ev.clientX - startX)));
+        var h = Math.max(220, Math.min(window.innerHeight*0.85, startH + (ev.clientY - startY)));
+        panel.style.width = w + 'px';
+        panel.style.height = h + 'px';
+      }
+      function onUp(){
+        resizeHandle.removeEventListener('pointermove', onMove);
+        resizeHandle.removeEventListener('pointerup', onUp);
+      }
+      resizeHandle.addEventListener('pointermove', onMove);
+      resizeHandle.addEventListener('pointerup', onUp);
+    });
+  })();
 
   // ---------- selection style panel ----------
   function mkRangeRow(labelText, min, max, step, value, onInput){
@@ -1053,7 +1352,7 @@
       hint.textContent = '이 그림 레이어가 선택됨 — 펜/형광펜/지우개가 여기 그려져요. 이동·회전 손잡이로 전체 그림을 옮기거나 돌릴 수 있어요.';
       row.appendChild(hint);
       var resetPosBtn = document.createElement('button');
-      resetPosBtn.textContent = '🎯 가운데로';
+      resetPosBtn.innerHTML = '<span class="material-symbols-outlined">filter_center_focus</span> 가운데로';
       resetPosBtn.title = '위치/회전 초기화';
       resetPosBtn.addEventListener('click', function(){
         el.x = PAGE_W/2; el.y = PAGE_H/2; el.rotation = 0;
@@ -1071,6 +1370,7 @@
       });
       fontSel.addEventListener('change', function(){ el.fontFamily = fontSel.value; renderElements(); commit(); });
       row.appendChild(fontSel);
+      row.appendChild(mkRangeRow('글자 크기', 10, 200, 1, el.fontSize, function(v){ el.fontSize = v; renderElements(); }));
       var colorInput = document.createElement('input'); colorInput.type='color'; colorInput.value=el.color; colorInput.title='글자 색상';
       colorInput.addEventListener('input', function(){ el.color = colorInput.value; renderElements(); });
       colorInput.addEventListener('change', commit);
@@ -1093,6 +1393,38 @@
       outlineColorInput.addEventListener('input', function(){ el.outlineColor = outlineColorInput.value; renderElements(); });
       outlineColorInput.addEventListener('change', commit);
       row.appendChild(outlineColorInput);
+      selPanel.appendChild(row);
+
+      var row2 = document.createElement('div'); row2.className = 'row';
+      row2.appendChild(mkRangeRow('자간', -3, 15, 0.5, el.letterSpacing || 0, function(v){ el.letterSpacing = v; renderElements(); }));
+      row2.appendChild(mkRangeRow('행간', 0.8, 2.5, 0.1, el.lineHeight || 1.3, function(v){ el.lineHeight = v; renderElements(); }));
+      var alignSel = document.createElement('select');
+      [['left','왼쪽 정렬'],['center','중앙 정렬'],['right','오른쪽 정렬']].forEach(function(pair){
+        var o = document.createElement('option'); o.value = pair[0]; o.textContent = pair[1];
+        if(pair[0] === (el.textAlign || 'center')) o.selected = true;
+        alignSel.appendChild(o);
+      });
+      alignSel.addEventListener('change', function(){ el.textAlign = alignSel.value; renderElements(); commit(); });
+      row2.appendChild(alignSel);
+
+      var widthToggleBtn = document.createElement('button');
+      widthToggleBtn.innerHTML = el.boxWidth ? '<span class="material-symbols-outlined">straighten</span> 너비 자동으로' : '<span class="material-symbols-outlined">straighten</span> 프레임 너비 고정';
+      widthToggleBtn.title = '프레임 너비를 고정하면 그 안에서 자동으로 줄바꿈돼요';
+      widthToggleBtn.addEventListener('click', function(){
+        if(el.boxWidth){
+          el.boxWidth = null;
+        } else {
+          var fresh2 = elLayer.querySelector('[data-id="' + el.id + '"] .el-text');
+          el.boxWidth = fresh2 ? Math.max(80, Math.round(fresh2.getBoundingClientRect().width / scaleFactor)) : 320;
+        }
+        renderElements(); renderSelPanel(); commit();
+      });
+      row2.appendChild(widthToggleBtn);
+      if(el.boxWidth){
+        row2.appendChild(mkRangeRow('프레임 너비', 60, 1400, 10, el.boxWidth, function(v){ el.boxWidth = v; renderElements(); }));
+      }
+      selPanel.appendChild(row2);
+      row = document.createElement('div'); row.className = 'row';
     }
 
     if(el.type === 'photo'){
@@ -1112,10 +1444,27 @@
         row.appendChild(mkRangeRow('두께', 2, 30, 1, el.frameWidth, function(v){ el.frameWidth=v; renderElements(); }));
       }
       var shadowBtn = document.createElement('button');
-      shadowBtn.textContent = '🌥 그림자';
+      shadowBtn.innerHTML = '<span class="material-symbols-outlined">wb_shadow</span> 그림자';
       if(el.shadow) shadowBtn.classList.add('active');
       shadowBtn.addEventListener('click', function(){ el.shadow = !el.shadow; renderElements(); renderSelPanel(); commit(); });
       row.appendChild(shadowBtn);
+
+      var flipXBtn = document.createElement('button');
+      flipXBtn.innerHTML = '<span class="material-symbols-outlined">flip</span> 좌우반전';
+      if(el.flipX) flipXBtn.classList.add('active');
+      flipXBtn.addEventListener('click', function(){ el.flipX = !el.flipX; renderElements(); renderSelPanel(); commit(); });
+      row.appendChild(flipXBtn);
+
+      var flipYBtn = document.createElement('button');
+      flipYBtn.innerHTML = '<span class="material-symbols-outlined" style="display:inline-block; transform:rotate(90deg);">flip</span> 상하반전';
+      if(el.flipY) flipYBtn.classList.add('active');
+      flipYBtn.addEventListener('click', function(){ el.flipY = !el.flipY; renderElements(); renderSelPanel(); commit(); });
+      row.appendChild(flipYBtn);
+
+      var cropBtn = document.createElement('button');
+      cropBtn.innerHTML = '<span class="material-symbols-outlined">crop</span> 자르기';
+      cropBtn.addEventListener('click', function(){ openCropModal(el); });
+      row.appendChild(cropBtn);
     }
 
     if(el.type === 'shape'){
@@ -1157,10 +1506,11 @@
       strokeColorInput.addEventListener('change', commit);
       row.appendChild(strokeColorInput);
       row.appendChild(mkRangeRow('테두리 굵기', 0, 20, 1, el.strokeWidth, function(v){ el.strokeWidth=v; renderElements(); }));
+      row.appendChild(mkRangeRow('불투명도', 0.05, 1, 0.05, el.opacity != null ? el.opacity : 1, function(v){ el.opacity=v; renderElements(); }));
     }
 
     if(el.type !== 'ink'){
-      var delBtn = document.createElement('button'); delBtn.className='danger'; delBtn.textContent='🗑 삭제';
+      var delBtn = document.createElement('button'); delBtn.className='danger'; delBtn.innerHTML = '<span class="material-symbols-outlined">delete</span> 삭제';
       delBtn.addEventListener('click', function(){
         curPage().elements = curPage().elements.filter(function(e){ return e.id !== selectedId; });
         selectedId = null; renderElements(); renderSelPanel(); renderLayerPanel();
@@ -1176,16 +1526,15 @@
   var activeStrokeLayer = null;
   var pts = [];
   var toolAlpha = 1, toolWidth = 4, toolColor = '#000', toolErase = false, toolPressure = false;
+  var eraserSubMode = 'stroke';
 
   function setMode(newMode){
     mode = newMode;
-    if(pendingAdd) setPendingAdd(null);
     [['modeSelectBtn','select'],['modePenBtn','pen'],['modeHiBtn','highlighter'],['modeEraserBtn','eraser']].forEach(function(p){
       document.getElementById(p[0]).classList.toggle('active', mode === p[1]);
     });
-    var showDrawOptions = mode !== 'select';
-    document.getElementById('drawOptions').style.display = showDrawOptions ? 'flex' : 'none';
-    document.getElementById('drawOptionsDivider').style.display = showDrawOptions ? 'block' : 'none';
+    document.getElementById('eraserTypeGroup').style.visibility = (mode === 'eraser') ? 'visible' : 'hidden';
+    document.getElementById('drawColorInput').style.visibility = (mode === 'pen' || mode === 'highlighter') ? 'visible' : 'hidden';
     if((mode === 'pen' || mode === 'highlighter') && !curPage().elements.some(function(e){ return e.type === 'ink'; })){
       curPage().elements.push(makeInkLayer());
       commit();
@@ -1353,12 +1702,55 @@
     if(activeStrokeLayer){
       activeStrokeLayer.ctx.globalCompositeOperation='source-over';
       activeStrokeLayer.ctx.globalAlpha=1;
+      if(toolErase){
+        activeStrokeLayer.strokes = [];
+      } else {
+        activeStrokeLayer.strokes.push({points: pts.slice(), color: toolColor, width: toolWidth, alpha: toolAlpha, pressureEnabled: toolPressure});
+      }
       computeInkContentBBox(activeStrokeLayer);
     }
     activeStrokeLayer = null;
     pts = [];
     renderElements();
     commit();
+  }
+
+  function replayLayerStrokes(layer){
+    layer.ctx.clearRect(0,0,PAGE_W,PAGE_H);
+    layer.strokes.forEach(function(s){
+      layer.ctx.globalCompositeOperation = 'source-over';
+      layer.ctx.globalAlpha = s.alpha;
+      if(s.pressureEnabled){ drawPressurePath(layer.ctx, s.points, s.width, s.color); }
+      else { drawSmoothPath(layer.ctx, s.points, s.width, s.color); }
+    });
+    layer.ctx.globalAlpha = 1;
+    computeInkContentBBox(layer);
+  }
+  function pointToSegmentDist(px,py,x1,y1,x2,y2){
+    var dx = x2-x1, dy = y2-y1;
+    var lenSq = dx*dx + dy*dy;
+    var t = lenSq > 0 ? Math.max(0, Math.min(1, ((px-x1)*dx + (py-y1)*dy)/lenSq)) : 0;
+    var cx = x1 + t*dx, cy = y1 + t*dy;
+    return Math.hypot(px-cx, py-cy);
+  }
+  function strokeHitTest(stroke, px, py){
+    var threshold = Math.max(12, stroke.width/2 + 8);
+    if(stroke.points.length === 1){
+      return Math.hypot(px - stroke.points[0].x, py - stroke.points[0].y) <= threshold;
+    }
+    for(var i=0; i<stroke.points.length-1; i++){
+      var p0 = stroke.points[i], p1 = stroke.points[i+1];
+      if(pointToSegmentDist(px, py, p0.x, p0.y, p1.x, p1.y) <= threshold) return true;
+    }
+    return false;
+  }
+  function eraseStrokesNear(layer, p){
+    var before = layer.strokes.length;
+    layer.strokes = layer.strokes.filter(function(s){ return !strokeHitTest(s, p.x, p.y); });
+    if(layer.strokes.length !== before){
+      replayLayerStrokes(layer);
+      renderElements();
+    }
   }
 
   function pointFromEvent(e){
@@ -1375,15 +1767,30 @@
   document.getElementById('modePenBtn').addEventListener('click', function(){ setMode('pen'); });
   document.getElementById('modeHiBtn').addEventListener('click', function(){ setMode('highlighter'); });
   document.getElementById('modeEraserBtn').addEventListener('click', function(){ setMode('eraser'); });
+  document.getElementById('eraserPixelBtn').addEventListener('click', function(e){
+    e.stopPropagation();
+    eraserSubMode = 'pixel';
+    document.getElementById('eraserPixelBtn').classList.add('active');
+    document.getElementById('eraserStrokeBtn').classList.remove('active');
+    updateBrushCursor();
+  });
+  document.getElementById('eraserStrokeBtn').addEventListener('click', function(e){
+    e.stopPropagation();
+    eraserSubMode = 'stroke';
+    document.getElementById('eraserStrokeBtn').classList.add('active');
+    document.getElementById('eraserPixelBtn').classList.remove('active');
+    updateBrushCursor();
+  });
   document.getElementById('clearInkBtn').addEventListener('click', function(){
     var layer = getActiveInkLayerCreating();
     layer.ctx.clearRect(0,0,PAGE_W,PAGE_H);
+    layer.strokes = [];
     layer.contentBBox = null;
     renderElements(); renderLayerPanel();
     commit();
   });
   drawColorInput.addEventListener('input', function(){ drawColor = drawColorInput.value; });
-  drawWidthInput.addEventListener('input', function(){ drawWidth = parseInt(drawWidthInput.value); });
+  drawWidthInput.addEventListener('input', function(){ drawWidth = parseInt(drawWidthInput.value); updateBrushCursor(); });
 
   // ---------- pressure curve editor ----------
   var curveGraph = document.getElementById('pressureCurveGraph');
@@ -1393,18 +1800,20 @@
     var t = (122 - y) / 104;
     return Math.max(CURVE_MIN, Math.min(CURVE_MAX, CURVE_MIN + t * (CURVE_MAX - CURVE_MIN)));
   }
+  var curvePolyEl = null, curveCircleEls = [];
   function renderPressureCurveGraph(){
     curveGraph.innerHTML = '';
+    curveCircleEls = [];
     var ns = 'http://www.w3.org/2000/svg';
     var base = document.createElementNS(ns, 'line');
     base.setAttribute('x1', 15); base.setAttribute('y1', 122); base.setAttribute('x2', 205); base.setAttribute('y2', 122);
     base.setAttribute('stroke', 'var(--border)'); base.setAttribute('stroke-width', '1.5');
     curveGraph.appendChild(base);
     var poly = document.createElementNS(ns, 'polyline');
-    var ptsStr = pressureCurvePoints.map(function(v, i){ return CURVE_X[i] + ',' + curveValToY(v); }).join(' ');
-    poly.setAttribute('points', ptsStr);
+    poly.setAttribute('points', pressureCurvePoints.map(function(v, i){ return CURVE_X[i] + ',' + curveValToY(v); }).join(' '));
     poly.setAttribute('fill', 'none'); poly.setAttribute('stroke', 'var(--accent)'); poly.setAttribute('stroke-width', '2.5');
     curveGraph.appendChild(poly);
+    curvePolyEl = poly;
     pressureCurvePoints.forEach(function(v, i){
       var c = document.createElementNS(ns, 'circle');
       c.setAttribute('cx', CURVE_X[i]); c.setAttribute('cy', curveValToY(v)); c.setAttribute('r', 7);
@@ -1412,7 +1821,12 @@
       c.style.cursor = 'grab'; c.style.touchAction = 'none';
       attachCurvePointDrag(c, i);
       curveGraph.appendChild(c);
+      curveCircleEls.push(c);
     });
+  }
+  function updateCurveGraphLive(){
+    if(curvePolyEl) curvePolyEl.setAttribute('points', pressureCurvePoints.map(function(v, i){ return CURVE_X[i] + ',' + curveValToY(v); }).join(' '));
+    curveCircleEls.forEach(function(c, i){ c.setAttribute('cy', curveValToY(pressureCurvePoints[i])); });
   }
   function attachCurvePointDrag(circle, index){
     circle.addEventListener('pointerdown', function(e){
@@ -1422,10 +1836,13 @@
         var rect = curveGraph.getBoundingClientRect();
         var localY = (ev.clientY - rect.top) * (140 / rect.height);
         pressureCurvePoints[index] = curveYToVal(localY);
-        renderPressureCurveGraph();
+        updateCurveGraphLive();
+      }
+      function onUp(){
+        circle.removeEventListener('pointermove', onMove);
+        circle.removeEventListener('pointerup', onUp);
         savePressureCurve();
       }
-      function onUp(){ circle.removeEventListener('pointermove', onMove); circle.removeEventListener('pointerup', onUp); }
       circle.addEventListener('pointermove', onMove);
       circle.addEventListener('pointerup', onUp);
     });
@@ -1462,7 +1879,9 @@
 
   document.getElementById('toggleStickerBtn').addEventListener('click', function(){
     var panel = document.getElementById('stickerPanel');
-    panel.style.display = panel.style.display === 'block' ? 'none' : 'block';
+    var show = panel.style.display !== 'block';
+    closeOtherPanels('stickerPanel');
+    panel.style.display = show ? 'block' : 'none';
   });
   function renderCategoryTabs(){
     var tabs = document.getElementById('categoryTabs'); tabs.innerHTML = '';
@@ -1477,7 +1896,7 @@
     var grid = document.getElementById('stickerGrid'); grid.innerHTML = '';
     categories[activeCat].emojis.forEach(function(em){
       var b = document.createElement('button'); b.textContent = em;
-      b.addEventListener('click', function(){ setPendingAdd({kind:'sticker', emoji:em}); });
+      b.addEventListener('click', function(){ addStickerAt(em, PAGE_W/2 + (Math.random()*60-30), PAGE_H/2 + (Math.random()*60-30)); });
       grid.appendChild(b);
     });
   }
@@ -1485,7 +1904,7 @@
   function submitCustomEmoji(){
     var val = customEmojiInput.value.trim();
     if(!val) return;
-    setPendingAdd({kind:'sticker', emoji: val});
+    addStickerAt(val, PAGE_W/2 + (Math.random()*60-30), PAGE_H/2 + (Math.random()*60-30));
     customEmojiInput.value = '';
   }
   document.getElementById('addCustomEmojiBtn').addEventListener('click', submitCustomEmoji);
@@ -1494,32 +1913,92 @@
   });
 
   document.getElementById('addTextBtn').addEventListener('click', function(){ addTextAt(PAGE_W/2, PAGE_H/2); });
-  document.getElementById('addShapeBtn').addEventListener('click', function(){ setPendingAdd({kind:'shape'}); });
+  document.getElementById('addShapeBtn').addEventListener('click', function(){ addShapeAt(PAGE_W/2, PAGE_H/2); });
   var photoInput = document.getElementById('photoInput');
-  document.getElementById('addPhotoBtn').addEventListener('click', function(){ photoInput.click(); });
-  photoInput.addEventListener('change', function(){
-    var file = photoInput.files[0];
-    if(!file) return;
+  document.getElementById('addPhotoBtn').addEventListener('click', function(){
+    var panel = document.getElementById('photoPanel');
+    var show = panel.style.display !== 'block';
+    closeOtherPanels('photoPanel');
+    panel.style.display = show ? 'block' : 'none';
+    if(show) renderMediaLibrary();
+  });
+  document.getElementById('uploadPhotoBtn').addEventListener('click', function(){ photoInput.click(); });
+
+  function saveToMediaLibrary(dataUrl){
+    var id = 'media_' + Date.now() + '_' + Math.random().toString(36).slice(2,8);
+    return idbSet('media', id, {dataURL: dataUrl, ts: Date.now()}).then(function(){ return id; }).catch(function(){ return null; });
+  }
+  function renderMediaLibrary(){
+    var grid = document.getElementById('mediaLibraryGrid');
+    idbGetAllKeys('media').then(function(keys){
+      return Promise.all(keys.map(function(k){ return idbGet('media', k).then(function(v){ return {id:k, dataURL: v.dataURL}; }); }));
+    }).then(function(items){
+      grid.innerHTML = '';
+      var totalBytes = 0;
+      items.forEach(function(it){
+        totalBytes += (it.dataURL ? it.dataURL.length : 0) * 0.75;
+        var wrap = document.createElement('div');
+        wrap.style.position = 'relative';
+        var btn = document.createElement('button');
+        btn.style.padding = '0'; btn.style.width = '100%'; btn.style.height = '64px'; btn.style.overflow = 'hidden';
+        var img = document.createElement('img');
+        img.src = it.dataURL; img.style.width = '100%'; img.style.height = '100%'; img.style.objectFit = 'cover';
+        btn.appendChild(img);
+        btn.title = '캔버스에 추가';
+        btn.addEventListener('click', function(){
+          var loadImg = new Image();
+          loadImg.onload = function(){ addPhotoAt(it.dataURL, loadImg.naturalWidth, loadImg.naturalHeight, loadImg); };
+          loadImg.src = it.dataURL;
+        });
+        var delBtn = document.createElement('button');
+        delBtn.innerHTML = '<span class="material-symbols-outlined">close</span>'; delBtn.title = '내 파일에서 삭제';
+        delBtn.style.position = 'absolute'; delBtn.style.top = '-4px'; delBtn.style.right = '-4px';
+        delBtn.style.width = '20px'; delBtn.style.height = '20px'; delBtn.style.padding = '0'; delBtn.style.fontSize = '10px';
+        delBtn.addEventListener('click', function(e){
+          e.stopPropagation();
+          idbDelete('media', it.id).then(renderMediaLibrary);
+        });
+        wrap.appendChild(btn); wrap.appendChild(delBtn);
+        grid.appendChild(wrap);
+      });
+      var mb = totalBytes / (1024*1024);
+      document.getElementById('mediaUsageText').textContent = mb < 1 ? Math.round(totalBytes/1024) + ' KB' : mb.toFixed(1) + ' MB';
+    }).catch(function(){ /* ignore */ });
+  }
+
+  function loadImageFile(file, x, y){
+    if(!file || !file.type || file.type.indexOf('image/') !== 0) return;
     var reader = new FileReader();
     reader.onload = function(e){
+      var dataUrl = e.target.result;
       var img = new Image();
-      img.onload = function(){ addPhoto(e.target.result, img.naturalWidth, img.naturalHeight, img); };
+      img.onload = function(){ addPhotoAt(dataUrl, img.naturalWidth, img.naturalHeight, img, x, y); };
       img.onerror = function(){ alert('이미지를 불러오지 못했어요. 다른 파일로 시도해보세요.'); };
-      img.src = e.target.result;
+      img.src = dataUrl;
+      saveToMediaLibrary(dataUrl).then(function(){
+        if(document.getElementById('photoPanel').style.display === 'block') renderMediaLibrary();
+      });
     };
     reader.readAsDataURL(file);
+  }
+  photoInput.addEventListener('change', function(){
+    var file = photoInput.files[0];
+    if(file) loadImageFile(file);
     photoInput.value = '';
   });
 
+  stage.addEventListener('dragover', function(e){ e.preventDefault(); stage.style.outline = '2px dashed var(--accent2)'; });
+  stage.addEventListener('dragleave', function(){ stage.style.outline = 'none'; });
+  stage.addEventListener('drop', function(e){
+    e.preventDefault();
+    stage.style.outline = 'none';
+    var files = e.dataTransfer ? e.dataTransfer.files : null;
+    if(!files || !files.length) return;
+    var p = toInternal(e.clientX, e.clientY);
+    Array.from(files).forEach(function(file, i){ loadImageFile(file, p.x + i*30, p.y + i*30); });
+  });
+
   stage.addEventListener('click', function(e){
-    if(pendingAdd){
-      if(mode !== 'select'){ setPendingAdd(null); return; }
-      var p = toInternal(e.clientX, e.clientY);
-      if(pendingAdd.kind === 'sticker') addStickerAt(pendingAdd.emoji, p.x, p.y);
-      else if(pendingAdd.kind === 'shape') addShapeAt(p.x, p.y);
-      setPendingAdd(null);
-      return;
-    }
     if(e.target === stage || e.target === bgPattern || e.target === elLayer || e.target === foldShade){ deselectAll(); }
   });
 
@@ -1604,11 +2083,14 @@
     }
     return tile;
   }
-  function applyCanvasShapeFill(ctx, el){
+  function applyCanvasShapeFill(ctx, el, patternMatrix){
     if(el.fillType === 'solid'){ ctx.fillStyle = el.fillColor; return; }
     if(el.fillType === 'none'){ ctx.fillStyle = 'rgba(0,0,0,0)'; return; }
     var tile = buildCanvasPatternTile(el.fillType, el.fillColor, el.fillColor2, el.patternSize);
-    ctx.fillStyle = tile ? ctx.createPattern(tile, 'repeat') : el.fillColor;
+    if(!tile){ ctx.fillStyle = el.fillColor; return; }
+    var pat = ctx.createPattern(tile, 'repeat');
+    if(patternMatrix && pat.setTransform){ pat.setTransform(patternMatrix); }
+    ctx.fillStyle = pat;
   }
   function rasterizeShapeCanvas(el){
     var canvas = document.createElement('canvas');
@@ -1616,6 +2098,7 @@
     canvas.width = el.w + pad*2;
     canvas.height = el.h + pad*2;
     var ctx = canvas.getContext('2d');
+    ctx.globalAlpha = el.opacity != null ? el.opacity : 1;
     ctx.translate(pad, pad);
     if(el.kind === 'rect' || el.kind === 'ellipse'){
       if(el.kind === 'ellipse'){ ctx.beginPath(); ctx.ellipse(el.w/2, el.h/2, el.w/2, el.h/2, 0, 0, Math.PI*2); ctx.closePath(); }
@@ -1629,7 +2112,11 @@
       ctx.scale(el.w/vb[2], el.h/vb[3]);
       ctx.translate(-vb[0], -vb[1]);
       var path2d = new Path2D(def.path);
-      if(el.fillType !== 'none'){ applyCanvasShapeFill(ctx, el); ctx.fill(path2d); }
+      if(el.fillType !== 'none'){
+        var pm = (typeof DOMMatrix !== 'undefined') ? new DOMMatrix().scale(vb[2]/el.w, vb[3]/el.h) : null;
+        applyCanvasShapeFill(ctx, el, pm);
+        ctx.fill(path2d);
+      }
       if(el.strokeWidth > 0){
         ctx.lineWidth = el.strokeWidth * (vb[2]/el.w);
         ctx.strokeStyle = el.strokeColor;
@@ -1681,9 +2168,103 @@
     });
   });
 
+  // ---------- crop modal ----------
+  var cropTargetEl = null;
+  var cropRectState = null;
+  var cropImageEl = document.getElementById('cropImage');
+  function updateCropRectDisplay(){
+    var rect = document.getElementById('cropRect');
+    rect.style.left = cropRectState.x + 'px';
+    rect.style.top = cropRectState.y + 'px';
+    rect.style.width = cropRectState.w + 'px';
+    rect.style.height = cropRectState.h + 'px';
+  }
+  function openCropModal(el){
+    cropTargetEl = el;
+    document.getElementById('cropModalOverlay').style.display = 'flex';
+    cropImageEl.onload = function(){
+      var iw = cropImageEl.clientWidth, ih = cropImageEl.clientHeight;
+      cropRectState = {x: iw*0.1, y: ih*0.1, w: iw*0.8, h: ih*0.8};
+      updateCropRectDisplay();
+    };
+    cropImageEl.src = el.src;
+    if(cropImageEl.complete && cropImageEl.naturalWidth) cropImageEl.onload();
+  }
+  function closeCropModal(){
+    document.getElementById('cropModalOverlay').style.display = 'none';
+    cropTargetEl = null;
+  }
+  document.getElementById('cropCancelBtn').addEventListener('click', closeCropModal);
+  document.getElementById('cropApplyBtn').addEventListener('click', function(){
+    if(!cropTargetEl || !cropRectState) return;
+    var scaleX = cropImageEl.naturalWidth / cropImageEl.clientWidth;
+    var scaleY = cropImageEl.naturalHeight / cropImageEl.clientHeight;
+    var sx = cropRectState.x*scaleX, sy = cropRectState.y*scaleY;
+    var sw = Math.max(1, cropRectState.w*scaleX), sh = Math.max(1, cropRectState.h*scaleY);
+    var canvas = document.createElement('canvas');
+    canvas.width = sw; canvas.height = sh;
+    canvas.getContext('2d').drawImage(cropImageEl, sx, sy, sw, sh, 0, 0, sw, sh);
+    var dataUrl = canvas.toDataURL('image/png');
+    var targetEl = cropTargetEl;
+    var newImg = new Image();
+    newImg.onload = function(){
+      targetEl.src = dataUrl;
+      targetEl.imgObj = newImg;
+      targetEl.h = Math.max(20, Math.round(targetEl.w * (sh/sw)));
+      targetEl._cutoutKey = null;
+      renderElements();
+      commit();
+      closeCropModal();
+    };
+    newImg.src = dataUrl;
+  });
+  function attachCropHandleDrag(handleEl, corner){
+    handleEl.addEventListener('pointerdown', function(e){
+      e.stopPropagation();
+      handleEl.setPointerCapture(e.pointerId);
+      var iw = cropImageEl.clientWidth, ih = cropImageEl.clientHeight;
+      var start = {x:e.clientX, y:e.clientY};
+      var orig = {x:cropRectState.x, y:cropRectState.y, w:cropRectState.w, h:cropRectState.h};
+      function onMove(ev){
+        var dx = ev.clientX - start.x, dy = ev.clientY - start.y;
+        var r = {x:orig.x, y:orig.y, w:orig.w, h:orig.h};
+        if(corner.indexOf('l') >= 0){ r.x = Math.max(0, Math.min(orig.x+orig.w-20, orig.x+dx)); r.w = orig.w - (r.x-orig.x); }
+        if(corner.indexOf('r') >= 0){ r.w = Math.max(20, Math.min(iw-orig.x, orig.w+dx)); }
+        if(corner.indexOf('t') >= 0){ r.y = Math.max(0, Math.min(orig.y+orig.h-20, orig.y+dy)); r.h = orig.h - (r.y-orig.y); }
+        if(corner.indexOf('b') >= 0){ r.h = Math.max(20, Math.min(ih-orig.y, orig.h+dy)); }
+        cropRectState = r;
+        updateCropRectDisplay();
+      }
+      function onUp(){ handleEl.removeEventListener('pointermove', onMove); handleEl.removeEventListener('pointerup', onUp); }
+      handleEl.addEventListener('pointermove', onMove);
+      handleEl.addEventListener('pointerup', onUp);
+    });
+  }
+  ['tl','tr','bl','br'].forEach(function(corner){
+    attachCropHandleDrag(document.querySelector('.crop-handle[data-corner="' + corner + '"]'), corner);
+  });
+  document.getElementById('cropRect').addEventListener('pointerdown', function(e){
+    if(e.target.classList.contains('crop-handle')) return;
+    e.stopPropagation();
+    var rectEl = this;
+    rectEl.setPointerCapture(e.pointerId);
+    var iw = cropImageEl.clientWidth, ih = cropImageEl.clientHeight;
+    var start = {x:e.clientX, y:e.clientY};
+    var orig = {x:cropRectState.x, y:cropRectState.y, w:cropRectState.w, h:cropRectState.h};
+    function onMove(ev){
+      var dx = ev.clientX-start.x, dy = ev.clientY-start.y;
+      cropRectState.x = Math.max(0, Math.min(iw-orig.w, orig.x+dx));
+      cropRectState.y = Math.max(0, Math.min(ih-orig.h, orig.y+dy));
+      updateCropRectDisplay();
+    }
+    function onUp(){ rectEl.removeEventListener('pointermove', onMove); rectEl.removeEventListener('pointerup', onUp); }
+    rectEl.addEventListener('pointermove', onMove);
+    rectEl.addEventListener('pointerup', onUp);
+  });
+
   // ---------- serialize / deserialize (for autosave + undo history) ----------
   function serializeElement(el){
-    if(el.type === 'ink'){ return {id:el.id, type:'ink', x:el.x, y:el.y, rotation:el.rotation, dataURL: el.canvas.toDataURL('image/png')}; }
+    if(el.type === 'ink'){ return {id:el.id, type:'ink', name:el.name, x:el.x, y:el.y, rotation:el.rotation, strokes: el.strokes, dataURL: el.canvas.toDataURL('image/png')}; }
     if(el.type === 'photo'){
       var clone = {};
       for(var k in el){ if(k !== 'imgObj' && k !== '_cutoutCanvas' && k !== '_cutoutKey'){ clone[k] = el[k]; } }
@@ -1706,6 +2287,8 @@
       layer.x = data.x != null ? data.x : PAGE_W/2;
       layer.y = data.y != null ? data.y : PAGE_H/2;
       layer.rotation = data.rotation || 0;
+      layer.name = data.name || null;
+      layer.strokes = data.strokes || [];
       if(data.dataURL){
         var img = new Image();
         img.onload = function(){ layer.ctx.drawImage(img,0,0); computeInkContentBBox(layer); if(onReady) onReady(); };
@@ -1737,25 +2320,22 @@
     currentPage = Math.min(data.currentPage || 0, pages.length - 1);
   }
 
-  // ---------- autosave (localStorage) ----------
+  // ---------- autosave (IndexedDB — much larger capacity than localStorage) ----------
   var autosaveFailedWarned = false;
   function autosave(){
-    try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(serializeState())); }
-    catch(err){
+    idbSet('state', STORAGE_KEY, serializeState()).catch(function(){
       if(!autosaveFailedWarned){
         autosaveFailedWarned = true;
-        alert('⚠️ 브라우저 자동저장 용량이 가득 차서 최근 작업이 저장되지 않고 있어요.\n지금 바로 💾 "프로젝트 파일로 저장" 버튼을 눌러서 파일로 보관해주세요!\n(그림 레이어나 사진이 많아지면 저장 용량을 넘을 수 있어요.)');
+        alert('⚠️ 자동저장에 실패했어요.\n지금 바로 💾 "프로젝트 파일로 저장" 버튼을 눌러서 파일로 보관해주세요!');
       }
-    }
+    });
   }
   function loadFromStorage(){
-    try{
-      var raw = localStorage.getItem(STORAGE_KEY);
-      if(!raw) return false;
-      var data = JSON.parse(raw);
+    return idbGet('state', STORAGE_KEY).then(function(data){
+      if(!data) return false;
       deserializeState(data, function(){ renderElements(); });
       return true;
-    } catch(err){ return false; }
+    }).catch(function(){ return false; });
   }
   window.addEventListener('beforeunload', autosave);
 
@@ -1824,16 +2404,58 @@
   }
   document.getElementById('undoBtn').addEventListener('click', undo);
   document.getElementById('redoBtn').addEventListener('click', redo);
+  var clipboardEl = null;
   document.addEventListener('keydown', function(e){
     var mod = e.ctrlKey || e.metaKey;
     if(!mod) return;
     var key = (e.key || '').toLowerCase();
-    if(key !== 'z') return;
     var ae = document.activeElement;
     var isEditableFocus = ae && (ae.isContentEditable || ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA');
-    if(isEditableFocus) return;
+    if(key === 'z'){
+      if(isEditableFocus) return;
+      e.preventDefault();
+      if(e.shiftKey) redo(); else undo();
+      return;
+    }
+    if(key === 'c'){
+      if(isEditableFocus) return;
+      var el = curPage().elements.filter(function(x){ return x.id === selectedId; })[0];
+      if(el && el.type !== 'ink'){
+        var imgObjRef = el.imgObj;
+        clipboardEl = JSON.parse(JSON.stringify(el, function(k, v){
+          return (k === 'imgObj' || k === '_cutoutCanvas' || k === '_cutoutKey') ? undefined : v;
+        }));
+        clipboardEl._imgObjRef = imgObjRef;
+      }
+      return;
+    }
+    if(key === 'v'){
+      if(isEditableFocus || !clipboardEl) return;
+      e.preventDefault();
+      var clone = JSON.parse(JSON.stringify(clipboardEl, function(k, v){ return k === '_imgObjRef' ? undefined : v; }));
+      clone.id = idCounter++;
+      clone.x = Math.min(PAGE_W, (clone.x || PAGE_W/2) + 26);
+      clone.y = Math.min(PAGE_H, (clone.y || PAGE_H/2) + 26);
+      if(clone.type === 'photo'){ clone.imgObj = clipboardEl._imgObjRef; }
+      curPage().elements.push(clone);
+      selectElement(clone.id);
+      commit();
+      return;
+    }
+  });
+
+  document.addEventListener('keydown', function(e){
+    if(e.key !== 'Delete' && e.key !== 'Backspace') return;
+    var ae = document.activeElement;
+    var isEditableFocus = ae && (ae.isContentEditable || ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA');
+    if(isEditableFocus || selectedId == null) return;
+    var el = curPage().elements.filter(function(x){ return x.id === selectedId; })[0];
+    if(!el) return;
     e.preventDefault();
-    if(e.shiftKey) redo(); else undo();
+    curPage().elements = curPage().elements.filter(function(x){ return x.id !== selectedId; });
+    selectedId = null;
+    renderElements(); renderSelPanel(); renderLayerPanel();
+    commit();
   });
 
   // ---------- theme (outer UI only, does not affect the diary page itself) ----------
@@ -1853,14 +2475,16 @@
   try{ savedTheme = localStorage.getItem(THEME_KEY) || 'pink'; } catch(err){ /* ignore */ }
   applyTheme(savedTheme);
   loadPressureCurve();
-  if(!loadFromStorage()){
-    pages = [makePage()];
-    currentPage = 0;
-  }
-  selectedId = null;
-  renderAllPage();
-  setMode('select');
-  pushHistory();
+  loadFromStorage().then(function(loaded){
+    if(!loaded){
+      pages = [makePage()];
+      currentPage = 0;
+    }
+    selectedId = null;
+    renderAllPage();
+    setMode('select');
+    pushHistory();
+  });
 })();
 </script>
 </body>
