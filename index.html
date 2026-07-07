@@ -111,6 +111,17 @@
     cursor:nwse-resize; touch-action:none; color:var(--muted);
   }
   .layer-panel-resize .material-symbols-outlined{font-size:16px; transform:rotate(45deg);}
+  .color-picker-swatch{width:30px; height:30px; border-radius:7px; border:1px solid var(--border); cursor:pointer; display:inline-block; vertical-align:middle; flex-shrink:0; box-shadow:inset 0 0 0 1px rgba(255,255,255,0.4);}
+  .color-picker-popover{position:fixed; background:var(--card); border:1px solid var(--border); border-radius:12px; padding:12px; box-shadow:0 10px 28px rgba(var(--shadow),0.25); z-index:300; display:flex; flex-direction:column; gap:10px; width:190px;}
+  .color-picker-sv-wrap{position:relative; line-height:0;}
+  .color-picker-sv{border-radius:8px; display:block; touch-action:none; cursor:crosshair; width:100%; height:150px;}
+  .color-picker-sv-cursor{position:absolute; width:14px; height:14px; border:2px solid #fff; border-radius:50%; box-shadow:0 0 3px rgba(0,0,0,0.7), inset 0 0 1px rgba(0,0,0,0.4); transform:translate(-50%,-50%); pointer-events:none;}
+  .color-picker-hue{position:relative; height:16px; border-radius:8px; background:linear-gradient(to right, red,yellow,lime,cyan,blue,magenta,red); touch-action:none; cursor:pointer;}
+  .color-picker-hue-cursor{position:absolute; top:-2px; width:16px; height:20px; border:2px solid #fff; border-radius:5px; box-shadow:0 0 3px rgba(0,0,0,0.7); transform:translateX(-50%); pointer-events:none; box-sizing:border-box;}
+  .color-picker-hex-row{display:flex; align-items:center; gap:6px;}
+  .color-picker-hex-row input{flex:1; min-width:0; font-size:13px; padding:4px 6px; border:1px solid var(--border); border-radius:6px; font-family:monospace;}
+  .color-picker-swatches{display:grid; grid-template-columns:repeat(8, 1fr); gap:4px;}
+  .color-picker-swatches button{width:100%; aspect-ratio:1; border-radius:5px; border:1px solid var(--border); padding:0; cursor:pointer; min-height:0;}
   .cat-tabs{display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px;}
   .cat-tabs button{padding:5px 12px; font-size:12px;}
   .sticker-grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(42px,1fr)); gap:2px; max-height:130px; overflow-y:auto; background:var(--soft); border-radius:10px; padding:6px;}
@@ -146,7 +157,7 @@
   .frame-white{background:#fff; padding:10px; display:inline-block;}
   .frame-polaroid{background:#fff; padding:10px 10px 34px 10px; display:inline-block;}
   .frame-color{background:transparent; display:inline-block;}
-  .has-shadow{filter:drop-shadow(0 4px 10px rgba(0,0,0,0.18));}
+  .has-shadow{box-shadow:0 4px 10px rgba(0,0,0,0.18);}
   .el-shape-content{box-sizing:border-box; display:block;}
   #selPanel{display:none; margin-top:12px;}
   .ink-hint{font-size:12px; color:var(--muted);}
@@ -183,7 +194,7 @@
 
   <div class="panel">
     <div class="row">
-      <input type="color" id="bgColorInput" value="#FFFDF8" title="배경색" aria-label="배경색">
+      <span id="bgColorInputSlot"></span>
       <select id="patternSelect" title="속지 패턴" aria-label="속지 패턴">
         <option value="blank">무지</option>
         <option value="lined">줄노트</option>
@@ -197,6 +208,10 @@
       <button id="undoBtn" class="icon-btn" title="실행 취소 (Ctrl+Z)" aria-label="실행 취소"><span class="material-symbols-outlined">undo</span></button>
       <button id="redoBtn" class="icon-btn" title="다시 실행 (Ctrl+Shift+Z)" aria-label="다시 실행"><span class="material-symbols-outlined">redo</span></button>
       <span class="divider"></span>
+      <select id="exportFormatSelect" title="저장 형식" aria-label="저장 형식" style="font-size:12px;">
+        <option value="png">PNG</option>
+        <option value="gif">GIF</option>
+      </select>
       <button id="downloadBtn" class="icon-btn" title="이미지로 저장" aria-label="이미지로 저장"><span class="material-symbols-outlined">download</span></button>
       <button id="saveProjectBtn" class="icon-btn" title="프로젝트 파일로 저장" aria-label="프로젝트 파일로 저장"><span class="material-symbols-outlined">save</span></button>
       <button id="loadProjectBtn" class="icon-btn" title="프로젝트 파일 열기" aria-label="프로젝트 파일 열기"><span class="material-symbols-outlined">folder_open</span></button>
@@ -207,7 +222,7 @@
           <button id="eraserPixelBtn" class="icon-btn" title="일반 지우개 (부분만 지우기)" aria-label="일반 지우개"><span class="material-symbols-outlined">ink_eraser</span></button>
           <button id="eraserStrokeBtn" class="icon-btn active" title="획 지우개 (선 전체 삭제)" aria-label="획 지우개"><span class="material-symbols-outlined">layers_clear</span></button>
         </div>
-        <input type="color" id="drawColorInput" value="#5B4636" title="펜 색상" aria-label="펜 색상">
+        <span id="drawColorInputSlot"></span>
         <input type="range" id="drawWidthInput" min="1" max="30" value="4" style="width:90px;" title="굵기" aria-label="굵기">
         <button id="clearInkBtn" class="icon-btn" title="현재 그림 레이어 지우기" aria-label="현재 그림 레이어 지우기"><span class="material-symbols-outlined">delete_sweep</span></button>
         <button id="togglePressureCurveBtn" class="icon-btn" title="필압 곡선 설정" aria-label="필압 곡선 설정"><span class="material-symbols-outlined">tune</span></button>
@@ -296,6 +311,10 @@
 
 <div id="cropModalOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:100; align-items:center; justify-content:center;">
   <div style="background:var(--card); border-radius:16px; padding:16px; display:flex; flex-direction:column; gap:12px; align-items:center;">
+    <div class="seg-group" id="cropShapeGroup" style="align-self:flex-start;">
+      <button id="cropShapeRectBtn" class="icon-btn active" title="사각형으로 자르기" aria-label="사각형"><span class="material-symbols-outlined">crop_square</span></button>
+      <button id="cropShapeCircleBtn" class="icon-btn" title="원형으로 자르기" aria-label="원형"><span class="material-symbols-outlined">circle</span></button>
+    </div>
     <div style="position:relative; display:inline-block; line-height:0;" id="cropStage">
       <img id="cropImage" style="display:block; max-width:78vw; max-height:65vh; user-select:none;" draggable="false">
       <div id="cropRect" style="position:absolute; border:2px dashed #fff; box-shadow:0 0 0 2000px rgba(0,0,0,0.45); touch-action:none;">
@@ -421,10 +440,14 @@
   var elLayer = document.getElementById('elementsLayer');
   var foldShade = document.getElementById('foldShade');
   var selPanel = document.getElementById('selPanel');
-  var bgColorInput = document.getElementById('bgColorInput');
+  var bgColorInput = createColorPicker('#FFFDF8', function(hex){ curPage().bg = hex; renderPattern(); }, function(hex){ curPage().bg = hex; commit(); }, '배경색');
+  bgColorInput.id = 'bgColorInput';
+  document.getElementById('bgColorInputSlot').replaceWith(bgColorInput);
   var patternSelect = document.getElementById('patternSelect');
   var pageIndicator = document.getElementById('pageIndicator');
-  var drawColorInput = document.getElementById('drawColorInput');
+  var drawColorInput = createColorPicker('#5B4636', function(hex){ drawColor = hex; }, function(){}, '펜 색상');
+  document.getElementById('drawColorInputSlot').replaceWith(drawColorInput);
+  drawColorInput.id = 'drawColorInput';
   var drawWidthInput = document.getElementById('drawWidthInput');
   var canvasScaler = document.getElementById('canvasScaler');
   var canvasWrapper = document.querySelector('.canvas-wrapper');
@@ -583,18 +606,17 @@
   }
 
   // ---------- cached cutout (traced-outline) canvas for transparent photos ----------
-  function getCutoutCanvas(el){
+  function getCutoutCanvas(el, forcePad){
     var srcImg = el.imgObj;
     var imgReady = !!(srcImg && srcImg.complete && srcImg.naturalWidth > 0);
-    var key = el.frameColor + '|' + el.frameWidth + '|' + el.w + '|' + el.h;
+    var effFrameWidth = forcePad != null ? forcePad : el.frameWidth;
+    var key = (forcePad != null ? 'noborder' : el.frameColor) + '|' + effFrameWidth + '|' + el.w + '|' + el.h + '|' + (el.shadow ? 1 : 0);
     if(imgReady && el._cutoutKey === key && el._cutoutCanvas) return el._cutoutCanvas;
-    var pad = Math.ceil(Math.max(0, el.frameWidth));
-    var canvas = document.createElement('canvas');
+    var pad = Math.ceil(Math.max(0, effFrameWidth));
     var cw = el.w + pad*2, ch = el.h + pad*2;
-    canvas.width = cw; canvas.height = ch;
-    canvas.style.width = cw + 'px';
-    canvas.style.height = ch + 'px';
-    var ctx = canvas.getContext('2d');
+    var composite = document.createElement('canvas');
+    composite.width = cw; composite.height = ch;
+    var cctx = composite.getContext('2d');
     if(imgReady && pad > 0){
       var sil = document.createElement('canvas'); sil.width = el.w; sil.height = el.h;
       var sctx = sil.getContext('2d');
@@ -602,21 +624,45 @@
       sctx.globalCompositeOperation = 'source-in';
       sctx.fillStyle = el.frameColor;
       sctx.fillRect(0, 0, el.w, el.h);
-      var steps = Math.max(12, Math.min(28, Math.round(pad * 1.1)));
       var radiusStep = Math.max(1, Math.round(pad / 6));
+      function stepsForRadius(rr){ return Math.max(16, Math.ceil((2 * Math.PI * rr) / 2)); }
       for(var rr = radiusStep; rr <= pad; rr += radiusStep){
-        for(var a = 0; a < steps; a++){
-          var theta = (a/steps) * Math.PI * 2;
-          ctx.drawImage(sil, pad + Math.cos(theta)*rr, pad + Math.sin(theta)*rr);
+        var stepsHere = stepsForRadius(rr);
+        for(var a = 0; a < stepsHere; a++){
+          var theta = (a/stepsHere) * Math.PI * 2;
+          cctx.drawImage(sil, pad + Math.cos(theta)*rr, pad + Math.sin(theta)*rr);
         }
       }
-      for(var a2 = 0; a2 < steps; a2++){
-        var theta2 = (a2/steps) * Math.PI * 2;
-        ctx.drawImage(sil, pad + Math.cos(theta2)*pad, pad + Math.sin(theta2)*pad);
+      var outerSteps = stepsForRadius(pad);
+      for(var a2 = 0; a2 < outerSteps; a2++){
+        var theta2 = (a2/outerSteps) * Math.PI * 2;
+        cctx.drawImage(sil, pad + Math.cos(theta2)*pad, pad + Math.sin(theta2)*pad);
       }
-      ctx.drawImage(srcImg, pad, pad, el.w, el.h);
+      cctx.drawImage(srcImg, pad, pad, el.w, el.h);
     } else if(imgReady){
-      ctx.drawImage(srcImg, 0, 0, el.w, el.h);
+      cctx.drawImage(srcImg, 0, 0, el.w, el.h);
+    }
+    var canvas;
+    if(imgReady && el.shadow){
+      var shadowMargin = 16 + pad;
+      canvas = document.createElement('canvas');
+      canvas.width = cw + shadowMargin*2;
+      canvas.height = ch + shadowMargin*2;
+      canvas.style.width = canvas.width + 'px';
+      canvas.style.height = canvas.height + 'px';
+      canvas.style.margin = (-shadowMargin) + 'px';
+      var ctx = canvas.getContext('2d');
+      // drawing the composite with shadow properties set casts a shadow that follows
+      // the composite's actual (non-rectangular) alpha silhouette, not just its box
+      ctx.shadowColor = 'rgba(0,0,0,0.28)';
+      ctx.shadowBlur = 10;
+      ctx.shadowOffsetY = 4;
+      ctx.drawImage(composite, shadowMargin, shadowMargin);
+    } else {
+      canvas = composite;
+      canvas.style.width = cw + 'px';
+      canvas.style.height = ch + 'px';
+      canvas.style.margin = '0';
     }
     if(imgReady){
       el._cutoutKey = key;
@@ -836,6 +882,8 @@
       } else if(el.type === 'photo'){
         if(el.frame === 'cutout'){
           contentEl = getCutoutCanvas(el);
+        } else if(el.frame === 'none'){
+          contentEl = getCutoutCanvas(el, 0);
         } else {
           contentEl = document.createElement('div');
           contentEl.className = 'el-photo-wrap';
@@ -850,7 +898,7 @@
           img.draggable = false;
           contentEl.appendChild(img);
         }
-        contentEl.classList.toggle('has-shadow', !!el.shadow);
+        contentEl.classList.toggle('has-shadow', !!el.shadow && el.frame !== 'cutout' && el.frame !== 'none');
         contentEl.style.transform = 'scaleX(' + (el.flipX ? -1 : 1) + ') scaleY(' + (el.flipY ? -1 : 1) + ')';
         div.appendChild(contentEl);
       } else if(el.type === 'shape'){
@@ -1094,7 +1142,7 @@
           } else if(el.type === 'photo'){
             el.w = Math.max(20, Math.min(1400, w0*factor));
             el.h = Math.max(20, Math.min(1400, h0*factor));
-            if(el.frame === 'cutout'){ contentEl.style.transform = 'scale(' + factor + ')'; }
+            if(el.frame === 'cutout' || el.frame === 'none'){ contentEl.style.transform = 'scale(' + factor + ')'; }
             else { var img2 = contentEl.querySelector('img'); if(img2){ img2.style.width = el.w+'px'; img2.style.height = el.h+'px'; } }
           } else if(el.type === 'text'){
             el.fontSize = Math.max(10, Math.min(200, fontSize0*factor));
@@ -1374,6 +1422,445 @@
     return wrap;
   }
 
+  // ---------- custom color picker (avoids native <input type=color>, whose built-in
+  // eyedropper button is known to hang in some browsers like Edge on file:// pages) ----------
+  var colorPresets = ['#FFFFFF','#000000','#4A3B2A','#8C8C8C','#FF6FA5','#FFD9E8','#FF3B30','#FF9500',
+    '#FFD500','#34C759','#0FB6A6','#12B886','#4DABF7','#3478F6','#5856D6','#AF52DE',
+    '#F5B400','#FF9F1C','#C77DFF','#F72585','#8ECAE6','#A0522D','#5B4636','#F0E6D2'];
+  function hexToRgb(hex){
+    hex = hex.replace('#','');
+    if(hex.length === 3){ hex = hex.split('').map(function(c){ return c+c; }).join(''); }
+    var num = parseInt(hex, 16);
+    return {r:(num>>16)&255, g:(num>>8)&255, b:num&255};
+  }
+  function rgbToHex(r,g,b){
+    function c(v){ v = Math.max(0, Math.min(255, Math.round(v))); var s = v.toString(16); return s.length===1?'0'+s:s; }
+    return '#' + c(r) + c(g) + c(b);
+  }
+  function rgbToHsv(r,g,b){
+    r/=255; g/=255; b/=255;
+    var max = Math.max(r,g,b), min = Math.min(r,g,b), d = max-min;
+    var h = 0;
+    if(d !== 0){
+      if(max === r) h = ((g-b)/d) % 6;
+      else if(max === g) h = (b-r)/d + 2;
+      else h = (r-g)/d + 4;
+      h *= 60;
+      if(h < 0) h += 360;
+    }
+    var s = max === 0 ? 0 : d/max;
+    var v = max;
+    return {h:h, s:s*100, v:v*100};
+  }
+  function hsvToRgb(h,s,v){
+    s/=100; v/=100;
+    var c = v*s, x = c*(1-Math.abs((h/60)%2-1)), m = v-c;
+    var r,g,b;
+    if(h<60){ r=c;g=x;b=0; } else if(h<120){ r=x;g=c;b=0; } else if(h<180){ r=0;g=c;b=x; }
+    else if(h<240){ r=0;g=x;b=c; } else if(h<300){ r=x;g=0;b=c; } else { r=c;g=0;b=x; }
+    return {r:(r+m)*255, g:(g+m)*255, b:(b+m)*255};
+  }
+  function hexToHsv(hex){ var rgb = hexToRgb(hex); return rgbToHsv(rgb.r, rgb.g, rgb.b); }
+  function hsvToHex(h,s,v){ var rgb = hsvToRgb(h,s,v); return rgbToHex(rgb.r, rgb.g, rgb.b); }
+
+  var activeColorPopover = null;
+  function createColorPicker(initialHex, onInput, onChange, titleText){
+    var wrapper = document.createElement('div');
+    wrapper.className = 'color-picker-swatch';
+    wrapper.style.background = initialHex;
+    wrapper.title = titleText || '색상 선택';
+    var currentHex = initialHex;
+    function applyHex(hex){
+      currentHex = hex;
+      wrapper.style.background = hex;
+    }
+
+    function closePopover(){
+      if(activeColorPopover && activeColorPopover.el){
+        activeColorPopover.el.remove();
+        document.removeEventListener('pointerdown', activeColorPopover.outsideHandler, true);
+      }
+      activeColorPopover = null;
+    }
+
+    function openPopover(){
+      if(activeColorPopover){ closePopover(); return; }
+      var popover = document.createElement('div');
+      popover.className = 'color-picker-popover';
+      var rect = wrapper.getBoundingClientRect();
+      var popW = 190;
+      var left = Math.min(rect.left, window.innerWidth - popW - 12);
+      popover.style.left = Math.max(6, left) + 'px';
+      var top = rect.bottom + 6;
+      if(top + 320 > window.innerHeight) top = Math.max(6, rect.top - 326);
+      popover.style.top = top + 'px';
+
+      var hsv = hexToHsv(currentHex);
+
+      var svWrap = document.createElement('div'); svWrap.className = 'color-picker-sv-wrap';
+      var svCanvas = document.createElement('canvas'); svCanvas.className = 'color-picker-sv';
+      svCanvas.width = 320; svCanvas.height = 300;
+      var svCursor = document.createElement('div'); svCursor.className = 'color-picker-sv-cursor';
+      svWrap.appendChild(svCanvas); svWrap.appendChild(svCursor);
+
+      var hueSlider = document.createElement('div'); hueSlider.className = 'color-picker-hue';
+      var hueCursor = document.createElement('div'); hueCursor.className = 'color-picker-hue-cursor';
+      hueSlider.appendChild(hueCursor);
+
+      var hexRow = document.createElement('div'); hexRow.className = 'color-picker-hex-row';
+      var hashLabel = document.createElement('span'); hashLabel.style.color = 'var(--muted)'; hashLabel.style.fontSize = '13px'; hashLabel.textContent = '#';
+      var hexInput = document.createElement('input'); hexInput.type = 'text'; hexInput.maxLength = 6;
+      var eyedropperBtn = document.createElement('button');
+      eyedropperBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size:18px;">colorize</span>';
+      eyedropperBtn.title = '스포이드 (다꾸 안에서 색 추출)';
+      eyedropperBtn.style.cssText = 'flex-shrink:0; width:30px; height:30px; padding:0; display:flex; align-items:center; justify-content:center;';
+      eyedropperBtn.addEventListener('click', function(e){
+        e.stopPropagation();
+        closePopover();
+        startEyedropper(function(hex){ applyHex(hex); onInput(hex); }, function(hex){ onChange(hex); });
+      });
+      hexRow.appendChild(hashLabel); hexRow.appendChild(hexInput); hexRow.appendChild(eyedropperBtn);
+
+      var swatchGrid = document.createElement('div'); swatchGrid.className = 'color-picker-swatches';
+      colorPresets.forEach(function(pc){
+        var sw = document.createElement('button'); sw.style.background = pc; sw.title = pc;
+        sw.addEventListener('click', function(){ setFromHex(pc); onInput(currentHex); onChange(currentHex); });
+        swatchGrid.appendChild(sw);
+      });
+
+      function renderSV(){
+        var ctx = svCanvas.getContext('2d');
+        var w = svCanvas.width, h = svCanvas.height;
+        ctx.fillStyle = 'hsl(' + hsv.h + ',100%,50%)';
+        ctx.fillRect(0,0,w,h);
+        var whiteGrad = ctx.createLinearGradient(0,0,w,0);
+        whiteGrad.addColorStop(0,'rgba(255,255,255,1)'); whiteGrad.addColorStop(1,'rgba(255,255,255,0)');
+        ctx.fillStyle = whiteGrad; ctx.fillRect(0,0,w,h);
+        var blackGrad = ctx.createLinearGradient(0,0,0,h);
+        blackGrad.addColorStop(0,'rgba(0,0,0,0)'); blackGrad.addColorStop(1,'rgba(0,0,0,1)');
+        ctx.fillStyle = blackGrad; ctx.fillRect(0,0,w,h);
+        svCursor.style.left = (hsv.s/100*100) + '%';
+        svCursor.style.top = ((1-hsv.v/100)*100) + '%';
+      }
+      function renderHue(){ hueCursor.style.left = (hsv.h/360*100) + '%'; }
+      function updateSwatchAndInputs(){
+        wrapper.style.background = currentHex;
+        hexInput.value = currentHex.replace('#','').toUpperCase();
+      }
+      function setFromHsv(){
+        currentHex = hsvToHex(hsv.h, hsv.s, hsv.v);
+        updateSwatchAndInputs();
+        renderSV(); renderHue();
+      }
+      function setFromHex(hex){
+        currentHex = hex;
+        hsv = hexToHsv(hex);
+        updateSwatchAndInputs();
+        renderSV(); renderHue();
+      }
+
+      svCanvas.addEventListener('pointerdown', function(e){
+        e.stopPropagation();
+        svCanvas.setPointerCapture(e.pointerId);
+        function move(ev){
+          var r = svCanvas.getBoundingClientRect();
+          var x = Math.max(0, Math.min(1, (ev.clientX - r.left) / r.width));
+          var y = Math.max(0, Math.min(1, (ev.clientY - r.top) / r.height));
+          hsv.s = x*100; hsv.v = (1-y)*100;
+          setFromHsv();
+          onInput(currentHex);
+        }
+        move(e);
+        function up(){
+          svCanvas.removeEventListener('pointermove', move);
+          svCanvas.removeEventListener('pointerup', up);
+          onChange(currentHex);
+        }
+        svCanvas.addEventListener('pointermove', move);
+        svCanvas.addEventListener('pointerup', up);
+      });
+      hueSlider.addEventListener('pointerdown', function(e){
+        e.stopPropagation();
+        hueSlider.setPointerCapture(e.pointerId);
+        function move(ev){
+          var r = hueSlider.getBoundingClientRect();
+          var x = Math.max(0, Math.min(1, (ev.clientX - r.left) / r.width));
+          hsv.h = x*360;
+          setFromHsv();
+          onInput(currentHex);
+        }
+        move(e);
+        function up(){
+          hueSlider.removeEventListener('pointermove', move);
+          hueSlider.removeEventListener('pointerup', up);
+          onChange(currentHex);
+        }
+        hueSlider.addEventListener('pointermove', move);
+        hueSlider.addEventListener('pointerup', up);
+      });
+      hexInput.addEventListener('input', function(){
+        var v = hexInput.value.replace(/[^0-9a-fA-F]/g,'').slice(0,6);
+        hexInput.value = v;
+        if(v.length === 6){
+          setFromHex('#' + v);
+          onInput(currentHex);
+        }
+      });
+      hexInput.addEventListener('change', function(){ onChange(currentHex); });
+      hexInput.addEventListener('keydown', function(e){ e.stopPropagation(); if(e.key === 'Enter'){ closePopover(); } });
+      hexInput.addEventListener('click', function(e){ e.stopPropagation(); });
+
+      popover.appendChild(svWrap);
+      popover.appendChild(hueSlider);
+      popover.appendChild(hexRow);
+      popover.appendChild(swatchGrid);
+      document.body.appendChild(popover);
+      renderSV(); renderHue(); updateSwatchAndInputs();
+
+      function outsideHandler(e){
+        if(!popover.contains(e.target) && e.target !== wrapper){ closePopover(); }
+      }
+      setTimeout(function(){ document.addEventListener('pointerdown', outsideHandler, true); }, 0);
+      activeColorPopover = {el: popover, outsideHandler: outsideHandler};
+    }
+
+    wrapper.addEventListener('click', function(e){ e.stopPropagation(); openPopover(); });
+    wrapper.setColorValue = function(hex){ currentHex = hex; wrapper.style.background = hex; };
+    return wrapper;
+  }
+
+  // ---------- custom eyedropper (samples colors from our own diary content directly,
+  // never using the native browser EyeDropper API, which is known to hang in some
+  // browsers like Edge when the page is opened from a local file) ----------
+  var eyedropperCallbacks = null;
+  var eyedropperBanner = null;
+  function rgbaToHexIfOpaque(data){
+    if(data[3] < 10) return null;
+    return rgbToHex(data[0], data[1], data[2]);
+  }
+  function pageToElementLocal(p, el){
+    var rot = -(el.rotation || 0) * Math.PI / 180;
+    var dx = p.x - el.x, dy = p.y - el.y;
+    return {
+      x: dx*Math.cos(rot) - dy*Math.sin(rot),
+      y: dx*Math.sin(rot) + dy*Math.cos(rot)
+    };
+  }
+  function getElementHalfExtents(el){
+    if(el.type === 'ink') return {hw: PAGE_W/2, hh: PAGE_H/2};
+    if(el.type === 'photo' || el.type === 'shape') return {hw: el.w/2, hh: el.h/2};
+    if(el.type === 'sticker') return {hw: el.size/2, hh: el.size/2};
+    if(el.type === 'text'){
+      var domEl = elLayer.querySelector('[data-id="' + el.id + '"] .el-text');
+      if(domEl){
+        var r = domEl.getBoundingClientRect();
+        return {hw: (r.width/2)/scaleFactor, hh: (r.height/2)/scaleFactor};
+      }
+      return {hw: 100, hh: 40};
+    }
+    return {hw: 50, hh: 50};
+  }
+  function sampleColorFromElement(candidate, boxEl, pagePoint, imgCache){
+    if(candidate.type === 'ink'){
+      var canvas = candidate.canvas;
+      var local = pageToLayerLocal(pagePoint, candidate);
+      var x = Math.round(local.x), y = Math.round(local.y);
+      if(x >= 0 && y >= 0 && x < canvas.width && y < canvas.height){
+        var pix = canvas.getContext('2d').getImageData(x, y, 1, 1).data;
+        return rgbaToHexIfOpaque(pix);
+      }
+      return null;
+    } else if(candidate.type === 'photo'){
+      var innerCanvas = boxEl.querySelector('canvas');
+      if(innerCanvas){
+        var local2 = pageToElementLocal(pagePoint, candidate);
+        var x2 = Math.round(local2.x + innerCanvas.width/2);
+        var y2 = Math.round(local2.y + innerCanvas.height/2);
+        if(x2 >= 0 && y2 >= 0 && x2 < innerCanvas.width && y2 < innerCanvas.height){
+          try{
+            return rgbaToHexIfOpaque(innerCanvas.getContext('2d').getImageData(x2, y2, 1, 1).data);
+          } catch(err){ return null; }
+        }
+        return null;
+      } else {
+        var imgEl = boxEl.querySelector('img');
+        if(imgEl && imgEl.complete && imgEl.naturalWidth){
+          try{
+            var tmp = imgCache && imgCache[candidate.id];
+            if(!tmp){
+              tmp = document.createElement('canvas');
+              tmp.width = imgEl.naturalWidth; tmp.height = imgEl.naturalHeight;
+              tmp.getContext('2d').drawImage(imgEl, 0, 0);
+              if(imgCache) imgCache[candidate.id] = tmp;
+            }
+            var local3 = pageToElementLocal(pagePoint, candidate);
+            var relX = (local3.x + candidate.w/2) / candidate.w;
+            var relY = (local3.y + candidate.h/2) / candidate.h;
+            var sx = Math.round(relX * tmp.width);
+            var sy = Math.round(relY * tmp.height);
+            if(sx >= 0 && sy >= 0 && sx < tmp.width && sy < tmp.height){
+              return rgbaToHexIfOpaque(tmp.getContext('2d').getImageData(sx, sy, 1, 1).data);
+            }
+          } catch(err){ return null; }
+        }
+        return null;
+      }
+    } else if(candidate.type === 'shape'){
+      if(candidate.fillType === 'none') return null;
+      return candidate.fillColor || null;
+    } else if(candidate.type === 'text'){
+      return candidate.color || null;
+    } else if(candidate.type === 'sticker'){
+      return null;
+    }
+    return null;
+  }
+  function sampleColorAtPagePoint(pagePoint, imgCache){
+    var elements = curPage().elements;
+    for(var i = elements.length - 1; i >= 0; i--){
+      var candidate = elements[i];
+      var local = pageToElementLocal(pagePoint, candidate);
+      var ext = getElementHalfExtents(candidate);
+      if(Math.abs(local.x) <= ext.hw && Math.abs(local.y) <= ext.hh){
+        var candidateBox = elLayer.querySelector('[data-id="' + candidate.id + '"]');
+        if(!candidateBox) continue;
+        var sampled = sampleColorFromElement(candidate, candidateBox, pagePoint, imgCache);
+        if(sampled) return sampled;
+        // transparent / no color here — keep looking at whatever is stacked beneath
+      }
+    }
+    return curPage().bg || '#FFFFFF';
+  }
+  function sampleColorAt(clientX, clientY){
+    return sampleColorAtPagePoint(toInternal(clientX, clientY));
+  }
+  var eyedropperStyleEl = null;
+  function buildEyedropperCursorUrl(){
+    var size = 32;
+    var canvas = document.createElement('canvas');
+    canvas.width = size; canvas.height = size;
+    var ctx = canvas.getContext('2d');
+    ctx.font = "24px 'Material Symbols Outlined'";
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    var cx = size/2, cy = size/2 + 1;
+    ctx.fillStyle = '#ffffff';
+    var offsets = [[-1,-1],[1,-1],[-1,1],[1,1],[0,-1.4],[0,1.4],[-1.4,0],[1.4,0]];
+    offsets.forEach(function(o){ ctx.fillText('colorize', cx + o[0], cy + o[1]); });
+    ctx.fillStyle = '#222222';
+    ctx.fillText('colorize', cx, cy);
+    return canvas.toDataURL('image/png');
+  }
+  var eyedropperMagWrap = null, eyedropperMagCanvas = null, eyedropperMagSwatch = null, eyedropperMagHex = null;
+  function ensureEyedropperMagnifier(){
+    if(eyedropperMagWrap) return;
+    eyedropperMagWrap = document.createElement('div');
+    eyedropperMagWrap.style.cssText = 'display:none; position:fixed; z-index:600; pointer-events:none; background:var(--card); border:1px solid var(--border); border-radius:12px; padding:7px; box-shadow:0 8px 22px rgba(var(--shadow),0.3); flex-direction:column; align-items:center; gap:5px;';
+    eyedropperMagCanvas = document.createElement('canvas');
+    eyedropperMagCanvas.style.cssText = 'border-radius:6px; image-rendering:pixelated; display:block;';
+    var swatchRow = document.createElement('div');
+    swatchRow.style.cssText = 'display:flex; align-items:center; gap:6px; font-size:11px; font-family:monospace; color:var(--text);';
+    eyedropperMagSwatch = document.createElement('div');
+    eyedropperMagSwatch.style.cssText = 'width:14px; height:14px; border-radius:4px; border:1px solid var(--border); flex-shrink:0;';
+    eyedropperMagHex = document.createElement('span');
+    swatchRow.appendChild(eyedropperMagSwatch);
+    swatchRow.appendChild(eyedropperMagHex);
+    eyedropperMagWrap.appendChild(eyedropperMagCanvas);
+    eyedropperMagWrap.appendChild(swatchRow);
+    document.body.appendChild(eyedropperMagWrap);
+  }
+  var EYEDROPPER_GRID_N = 9;
+  var EYEDROPPER_CELL_PX = 11;
+  function updateEyedropperMagnifier(clientX, clientY){
+    ensureEyedropperMagnifier();
+    var gridN = EYEDROPPER_GRID_N, cellPx = EYEDROPPER_CELL_PX, half = Math.floor(gridN/2);
+    eyedropperMagCanvas.width = gridN * cellPx;
+    eyedropperMagCanvas.height = gridN * cellPx;
+    var ctx = eyedropperMagCanvas.getContext('2d');
+    var pagePoint = toInternal(clientX, clientY);
+    var stepPage = 4 / scaleFactor; // page-space distance per magnified grid cell
+    var imgCache = {};
+    var centerHex = null;
+    for(var gy = 0; gy < gridN; gy++){
+      for(var gx = 0; gx < gridN; gx++){
+        var samplePoint = { x: pagePoint.x + (gx - half) * stepPage, y: pagePoint.y + (gy - half) * stepPage };
+        var hex = sampleColorAtPagePoint(samplePoint, imgCache);
+        if(gx === half && gy === half) centerHex = hex;
+        ctx.fillStyle = hex || '#ffffff';
+        ctx.fillRect(gx * cellPx, gy * cellPx, cellPx, cellPx);
+      }
+    }
+    ctx.strokeStyle = 'rgba(0,0,0,0.8)'; ctx.lineWidth = 2;
+    ctx.strokeRect(half*cellPx + 1, half*cellPx + 1, cellPx - 2, cellPx - 2);
+    ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = 1;
+    ctx.strokeRect(half*cellPx, half*cellPx, cellPx, cellPx);
+
+    var margin = 22;
+    var wrapW = gridN*cellPx + 16, wrapH = gridN*cellPx + 34;
+    var left = clientX + margin, top = clientY + margin;
+    if(left + wrapW > window.innerWidth) left = clientX - margin - wrapW;
+    if(top + wrapH > window.innerHeight) top = clientY - margin - wrapH;
+    eyedropperMagWrap.style.left = Math.max(4, left) + 'px';
+    eyedropperMagWrap.style.top = Math.max(4, top) + 'px';
+    eyedropperMagWrap.style.display = 'flex';
+    eyedropperMagSwatch.style.background = centerHex || '#fff';
+    eyedropperMagHex.textContent = (centerHex || '').toUpperCase();
+    return centerHex;
+  }
+  function hideEyedropperMagnifier(){
+    if(eyedropperMagWrap) eyedropperMagWrap.style.display = 'none';
+  }
+  var eyedropperMoveRAF = null;
+  var eyedropperLastX = 0, eyedropperLastY = 0;
+  function onEyedropperPointerMove(e){
+    eyedropperLastX = e.clientX; eyedropperLastY = e.clientY;
+    if(eyedropperMoveRAF) return;
+    eyedropperMoveRAF = requestAnimationFrame(function(){
+      eyedropperMoveRAF = null;
+      updateEyedropperMagnifier(eyedropperLastX, eyedropperLastY);
+    });
+  }
+  function onEyedropperPointerDown(e){
+    e.preventDefault(); e.stopPropagation();
+    var hex = sampleColorAt(e.clientX, e.clientY);
+    var cbs = eyedropperCallbacks;
+    stopEyedropper();
+    if(cbs && hex){ cbs.onInput(hex); cbs.onChange(hex); }
+  }
+  function onEyedropperKeydown(e){
+    if(e.key === 'Escape'){ e.preventDefault(); e.stopPropagation(); stopEyedropper(); }
+  }
+  function startEyedropper(onInput, onChange){
+    stopEyedropper();
+    eyedropperCallbacks = {onInput: onInput, onChange: onChange};
+    var cursorUrl = 'url("' + buildEyedropperCursorUrl() + '") 16 16, crosshair';
+    eyedropperStyleEl = document.createElement('style');
+    eyedropperStyleEl.textContent = '*{cursor:' + cursorUrl + ' !important;}';
+    document.head.appendChild(eyedropperStyleEl);
+    elLayer.style.pointerEvents = 'none';
+    curPage().elements.forEach(function(e){ if(e.type === 'ink') e.canvas.style.pointerEvents = 'none'; });
+    eyedropperBanner = document.createElement('div');
+    eyedropperBanner.textContent = '스포이드: 다꾸 안에서 추출할 색을 클릭하세요 (ESC로 취소)';
+    eyedropperBanner.style.cssText = 'position:fixed; top:14px; left:50%; transform:translateX(-50%); background:var(--card); color:var(--text); border:1px solid var(--border); padding:8px 18px; border-radius:20px; z-index:500; box-shadow:0 6px 18px rgba(var(--shadow),0.25); font-size:13px; pointer-events:none;';
+    document.body.appendChild(eyedropperBanner);
+    document.addEventListener('pointerdown', onEyedropperPointerDown, true);
+    document.addEventListener('pointermove', onEyedropperPointerMove, true);
+    document.addEventListener('keydown', onEyedropperKeydown, true);
+  }
+  function stopEyedropper(){
+    eyedropperCallbacks = null;
+    if(eyedropperMoveRAF){ cancelAnimationFrame(eyedropperMoveRAF); eyedropperMoveRAF = null; }
+    if(eyedropperStyleEl){ eyedropperStyleEl.remove(); eyedropperStyleEl = null; }
+    hideEyedropperMagnifier();
+    elLayer.style.pointerEvents = 'auto';
+    if(typeof updateInkPointerEvents === 'function') updateInkPointerEvents();
+    if(eyedropperBanner){ eyedropperBanner.remove(); eyedropperBanner = null; }
+    document.removeEventListener('pointerdown', onEyedropperPointerDown, true);
+    document.removeEventListener('pointermove', onEyedropperPointerMove, true);
+    document.removeEventListener('keydown', onEyedropperKeydown, true);
+  }
+
+
   function renderSelPanel(){
     selPanel.innerHTML = '';
     var el = curPage().elements.filter(function(e){ return e.id === selectedId; })[0];
@@ -1405,9 +1892,7 @@
       fontSel.addEventListener('change', function(){ el.fontFamily = fontSel.value; renderElements(); commit(); });
       row.appendChild(fontSel);
       row.appendChild(mkRangeRow('글자 크기', 10, 200, 1, el.fontSize, function(v){ el.fontSize = v; renderElements(); }));
-      var colorInput = document.createElement('input'); colorInput.type='color'; colorInput.value=el.color; colorInput.title='글자 색상';
-      colorInput.addEventListener('input', function(){ el.color = colorInput.value; renderElements(); });
-      colorInput.addEventListener('change', commit);
+      var colorInput = createColorPicker(el.color, function(hex){ el.color = hex; renderElements(); }, function(hex){ el.color = hex; commit(); }, '글자 색상');
       row.appendChild(colorInput);
 
       var boldBtn = document.createElement('button');
@@ -1423,9 +1908,7 @@
       row.appendChild(italicBtn);
 
       row.appendChild(mkRangeRow('테두리', 0, 8, 0.5, el.outlineWidth || 0, function(v){ el.outlineWidth = v; renderElements(); }));
-      var outlineColorInput = document.createElement('input'); outlineColorInput.type='color'; outlineColorInput.value = el.outlineColor || '#FFFFFF'; outlineColorInput.title='테두리 색상';
-      outlineColorInput.addEventListener('input', function(){ el.outlineColor = outlineColorInput.value; renderElements(); });
-      outlineColorInput.addEventListener('change', commit);
+      var outlineColorInput = createColorPicker(el.outlineColor || '#FFFFFF', function(hex){ el.outlineColor = hex; renderElements(); }, function(hex){ el.outlineColor = hex; commit(); }, '테두리 색상');
       row.appendChild(outlineColorInput);
       selPanel.appendChild(row);
 
@@ -1471,9 +1954,7 @@
       frameSel.addEventListener('change', function(){ el.frame = frameSel.value; renderElements(); renderSelPanel(); commit(); });
       row.appendChild(frameSel);
       if(el.frame === 'color' || el.frame === 'cutout'){
-        var fc = document.createElement('input'); fc.type='color'; fc.value=el.frameColor;
-        fc.addEventListener('input', function(){ el.frameColor = fc.value; renderElements(); });
-        fc.addEventListener('change', commit);
+        var fc = createColorPicker(el.frameColor, function(hex){ el.frameColor = hex; renderElements(); }, function(hex){ el.frameColor = hex; commit(); }, '테두리 색상');
         row.appendChild(fc);
         row.appendChild(mkRangeRow('두께', 2, 30, 1, el.frameWidth, function(v){ el.frameWidth=v; renderElements(); }));
       }
@@ -1523,21 +2004,15 @@
       fillSel.addEventListener('change', function(){ el.fillType = fillSel.value; renderElements(); renderSelPanel(); commit(); });
       row.appendChild(fillSel);
       if(el.fillType !== 'none'){
-        var c1 = document.createElement('input'); c1.type='color'; c1.value=el.fillColor; c1.title='채우기 색상 1';
-        c1.addEventListener('input', function(){ el.fillColor = c1.value; renderElements(); });
-        c1.addEventListener('change', commit);
+        var c1 = createColorPicker(el.fillColor, function(hex){ el.fillColor = hex; renderElements(); }, function(hex){ el.fillColor = hex; commit(); }, '채우기 색상 1');
         row.appendChild(c1);
       }
       if(el.fillType === 'stripe' || el.fillType === 'dot' || el.fillType === 'polka' || el.fillType === 'star' || el.fillType === 'check'){
-        var c2 = document.createElement('input'); c2.type='color'; c2.value=el.fillColor2; c2.title='채우기 색상 2';
-        c2.addEventListener('input', function(){ el.fillColor2 = c2.value; renderElements(); });
-        c2.addEventListener('change', commit);
+        var c2 = createColorPicker(el.fillColor2, function(hex){ el.fillColor2 = hex; renderElements(); }, function(hex){ el.fillColor2 = hex; commit(); }, '채우기 색상 2');
         row.appendChild(c2);
         row.appendChild(mkRangeRow('무늬 크기', 0.4, 2.5, 0.1, el.patternSize || 1, function(v){ el.patternSize=v; renderElements(); }));
       }
-      var strokeColorInput = document.createElement('input'); strokeColorInput.type='color'; strokeColorInput.value=el.strokeColor; strokeColorInput.title='테두리 색상';
-      strokeColorInput.addEventListener('input', function(){ el.strokeColor = strokeColorInput.value; renderElements(); });
-      strokeColorInput.addEventListener('change', commit);
+      var strokeColorInput = createColorPicker(el.strokeColor, function(hex){ el.strokeColor = hex; renderElements(); }, function(hex){ el.strokeColor = hex; commit(); }, '테두리 색상');
       row.appendChild(strokeColorInput);
       row.appendChild(mkRangeRow('테두리 굵기', 0, 20, 1, el.strokeWidth, function(v){ el.strokeWidth=v; renderElements(); }));
       row.appendChild(mkRangeRow('불투명도', 0.05, 1, 0.05, el.opacity != null ? el.opacity : 1, function(v){ el.opacity=v; renderElements(); }));
@@ -1823,7 +2298,6 @@
     renderElements(); renderLayerPanel();
     commit();
   });
-  drawColorInput.addEventListener('input', function(){ drawColor = drawColorInput.value; });
   drawWidthInput.addEventListener('input', function(){ drawWidth = parseInt(drawWidthInput.value); updateBrushCursor(); });
 
   // ---------- pressure curve editor ----------
@@ -1907,8 +2381,6 @@
     savePressureCurve();
   });
 
-  bgColorInput.addEventListener('input', function(){ curPage().bg = bgColorInput.value; renderPattern(); });
-  bgColorInput.addEventListener('change', commit);
   patternSelect.addEventListener('change', function(){ curPage().pattern = patternSelect.value; renderPattern(); commit(); });
 
   document.getElementById('toggleStickerBtn').addEventListener('click', function(){
@@ -2038,7 +2510,7 @@
 
   function renderIndicator(){ pageIndicator.textContent = '스프레드 ' + (currentPage+1) + ' / ' + pages.length; }
   function renderAllPage(){
-    bgColorInput.value = curPage().bg;
+    bgColorInput.setColorValue(curPage().bg);
     patternSelect.value = curPage().pattern;
     renderPattern(); renderElements(); renderSelPanel(); renderIndicator(); renderLayerPanel();
   }
@@ -2130,6 +2602,56 @@
     }
     ctx.fillStyle = pat;
   }
+  function rasterizePhotoCanvas(el){
+    var padTop = 0, padLeft = 0, padRight = 0, padBottom = 0;
+    var bgFill = null;
+    if(el.frame === 'white'){ padTop = padLeft = padRight = padBottom = 10; bgFill = '#fff'; }
+    else if(el.frame === 'polaroid'){ padTop = padLeft = padRight = 10; padBottom = 34; bgFill = '#fff'; }
+    else if(el.frame === 'color'){ padTop = padLeft = padRight = padBottom = el.frameWidth; }
+    var innerW = el.w, innerH = el.h;
+    var totalW = innerW + padLeft + padRight;
+    var totalH = innerH + padTop + padBottom;
+    var shadowMargin = el.shadow ? 16 : 0;
+    var canvas = document.createElement('canvas');
+    canvas.width = totalW + shadowMargin*2;
+    canvas.height = totalH + shadowMargin*2;
+    var ctx = canvas.getContext('2d');
+    var boxX = shadowMargin, boxY = shadowMargin;
+    if(el.shadow){
+      ctx.save();
+      ctx.shadowColor = 'rgba(0,0,0,0.28)';
+      ctx.shadowBlur = 10;
+      ctx.shadowOffsetY = 4;
+      ctx.fillStyle = bgFill || (el.frameColor || '#fff');
+      ctx.fillRect(boxX, boxY, totalW, totalH);
+      ctx.restore();
+    } else if(bgFill || el.frame === 'color'){
+      ctx.fillStyle = bgFill || el.frameColor;
+      ctx.fillRect(boxX, boxY, totalW, totalH);
+    }
+    if(el.frame === 'color' && el.frameWidth > 0){
+      // border ring: fill outer then clear inner, leaving just the border band, then draw image in the inner area
+      ctx.fillStyle = el.frameColor;
+      ctx.fillRect(boxX, boxY, totalW, totalH);
+    }
+    var imgObj = el.imgObj;
+    var innerX = boxX + padLeft, innerY = boxY + padTop;
+    if(imgObj && imgObj.complete && imgObj.naturalWidth){
+      // object-fit: contain, matching the live CSS behavior exactly
+      var nw = imgObj.naturalWidth, nh = imgObj.naturalHeight;
+      var scale = Math.min(innerW / nw, innerH / nh);
+      var drawW = nw * scale, drawH = nh * scale;
+      var drawX = innerX + (innerW - drawW) / 2;
+      var drawY = innerY + (innerH - drawH) / 2;
+      var flipX = el.flipX ? -1 : 1, flipY = el.flipY ? -1 : 1;
+      ctx.save();
+      ctx.translate(drawX + drawW/2, drawY + drawH/2);
+      ctx.scale(flipX, flipY);
+      ctx.drawImage(imgObj, -drawW/2, -drawH/2, drawW, drawH);
+      ctx.restore();
+    }
+    return {canvas: canvas, offsetX: -shadowMargin, offsetY: -shadowMargin};
+  }
   function rasterizeShapeCanvas(el){
     var canvas = document.createElement('canvas');
     var pad = el.strokeWidth > 0 ? Math.ceil(el.strokeWidth/2) + 1 : 0;
@@ -2165,8 +2687,130 @@
     return canvas;
   }
 
+  // ---------- GIF export (self-contained encoder, no external dependency) ----------
+  function gifQuantizeColor(r, g, b){
+    var rq = Math.round(r / 255 * 5);
+    var gq = Math.round(g / 255 * 6);
+    var bq = Math.round(b / 255 * 5);
+    return rq * 42 + gq * 6 + bq;
+  }
+  function gifBuildPalette(){
+    var palette = [];
+    for (var r = 0; r <= 5; r++){
+      for (var g = 0; g <= 6; g++){
+        for (var b = 0; b <= 5; b++){
+          palette.push([Math.round(r/5*255), Math.round(g/6*255), Math.round(b/5*255)]);
+        }
+      }
+    }
+    return palette;
+  }
+  function gifLzwCompressToCodes(indices, minCodeSize){
+    var clearCode = 1 << minCodeSize;
+    var eoiCode = clearCode + 1;
+    var codes = [clearCode];
+    var dictMap, nextCode;
+    function resetDict(){ dictMap = {}; nextCode = eoiCode + 1; }
+    resetDict();
+    var w = indices[0];
+    for (var i = 1; i < indices.length; i++){
+      var k = indices[i];
+      var key = w + '_' + k;
+      if (dictMap.hasOwnProperty(key)){ w = dictMap[key]; }
+      else {
+        codes.push(w);
+        dictMap[key] = nextCode;
+        nextCode++;
+        if (nextCode >= 4095){ codes.push(clearCode); resetDict(); }
+        w = k;
+      }
+    }
+    codes.push(w);
+    codes.push(eoiCode);
+    return codes;
+  }
+  function gifDeriveCodeSizes(codes, minCodeSize){
+    var clearCode = 1 << minCodeSize;
+    var eoiCode = clearCode + 1;
+    var sizes = new Array(codes.length);
+    var nextCode, codeSize;
+    function resetDict(){ nextCode = eoiCode + 1; codeSize = minCodeSize + 1; }
+    resetDict();
+    var prev = null;
+    for (var i = 0; i < codes.length; i++){
+      sizes[i] = codeSize;
+      var code = codes[i];
+      if (code === clearCode){ resetDict(); prev = null; continue; }
+      if (code === eoiCode){ continue; }
+      if (prev !== null){
+        nextCode++;
+        if (nextCode === (1 << codeSize) && codeSize < 12) codeSize++;
+      }
+      prev = code;
+    }
+    return sizes;
+  }
+  function gifPackCodes(codes, sizes){
+    var bitBuffer = 0, bitCount = 0;
+    var bytes = [];
+    for (var i = 0; i < codes.length; i++){
+      bitBuffer |= (codes[i] << bitCount);
+      bitCount += sizes[i];
+      while (bitCount >= 8){ bytes.push(bitBuffer & 0xFF); bitBuffer >>= 8; bitCount -= 8; }
+    }
+    if (bitCount > 0) bytes.push(bitBuffer & 0xFF);
+    return bytes;
+  }
+  function canvasToGifBlob(canvas){
+    var w = canvas.width, h = canvas.height;
+    var ctx = canvas.getContext('2d');
+    var imgData = ctx.getImageData(0, 0, w, h).data;
+    var numPixels = w * h;
+    var indices = new Uint8Array(numPixels);
+    for (var i = 0; i < numPixels; i++){
+      indices[i] = gifQuantizeColor(imgData[i*4], imgData[i*4+1], imgData[i*4+2]);
+    }
+    var minCodeSize = 8;
+    var codes = gifLzwCompressToCodes(indices, minCodeSize);
+    var sizes = gifDeriveCodeSizes(codes, minCodeSize);
+    var lzwBytes = gifPackCodes(codes, sizes);
+
+    var palette = gifBuildPalette();
+    var bytes = [];
+    function pushStr(s){ for (var i=0;i<s.length;i++) bytes.push(s.charCodeAt(i)); }
+    function push16(n){ bytes.push(n & 0xFF); bytes.push((n>>8) & 0xFF); }
+    pushStr('GIF89a');
+    push16(w); push16(h);
+    bytes.push(0xF0 | 7);
+    bytes.push(0); bytes.push(0);
+    for (var p = 0; p < 256; p++){
+      if (p < palette.length){ bytes.push(palette[p][0]); bytes.push(palette[p][1]); bytes.push(palette[p][2]); }
+      else { bytes.push(0); bytes.push(0); bytes.push(0); }
+    }
+    bytes.push(0x2C);
+    push16(0); push16(0); push16(w); push16(h);
+    bytes.push(0);
+    bytes.push(minCodeSize);
+    var pos = 0;
+    while (pos < lzwBytes.length){
+      var chunkLen = Math.min(255, lzwBytes.length - pos);
+      bytes.push(chunkLen);
+      for (var j=0;j<chunkLen;j++) bytes.push(lzwBytes[pos+j]);
+      pos += chunkLen;
+    }
+    bytes.push(0);
+    bytes.push(0x3B);
+    return new Blob([new Uint8Array(bytes)], {type:'image/gif'});
+  }
+
+  var exportInProgress = false;
   document.getElementById('downloadBtn').addEventListener('click', function(){
     if(typeof html2canvas === 'undefined'){ alert('이미지 저장 기능을 불러오지 못했어요.'); return; }
+    if(exportInProgress){ return; }
+    exportInProgress = true;
+    var downloadBtnEl = document.getElementById('downloadBtn');
+    downloadBtnEl.classList.add('active');
+    downloadBtnEl.style.opacity = '0.6';
     var wasSelected = selectedId; deselectAll();
     var swaps = [];
     curPage().elements.forEach(function(el){
@@ -2187,19 +2831,90 @@
       div.replaceChild(img, original);
       swaps.push({div: div, original: original, replacement: img});
     });
+    curPage().elements.forEach(function(el){
+      if(el.type !== 'photo' || el.frame === 'cutout' || el.frame === 'none') return;
+      var div = elLayer.querySelector('[data-id="' + el.id + '"]');
+      if(!div) return;
+      var original = div.firstChild;
+      if(!original) return;
+      var result = rasterizePhotoCanvas(el);
+      var img = document.createElement('img');
+      img.src = result.canvas.toDataURL('image/png');
+      img.style.width = result.canvas.width + 'px';
+      img.style.height = result.canvas.height + 'px';
+      img.style.display = 'block';
+      img.style.margin = result.offsetY + 'px';
+      div.replaceChild(img, original);
+      swaps.push({div: div, original: original, replacement: img});
+    });
     function restoreSwaps(){
       swaps.forEach(function(s){
         if(s.replacement.parentNode === s.div){ s.div.replaceChild(s.original, s.replacement); }
       });
     }
-    html2canvas(stage, {backgroundColor:null, scale:2, useCORS:true}).then(function(canvas){
+    var exportScale = 2;
+    // stage's own intended pixel box, in the SAME scale as the html2canvas capture —
+    // used to forcibly crop away anything html2canvas may fail to clip correctly
+    // (a known html2canvas limitation with overflow:hidden + CSS-transformed descendants)
+    var stageRect = stage.getBoundingClientRect();
+    var expectedW = Math.round(stageRect.width * exportScale);
+    var expectedH = Math.round(stageRect.height * exportScale);
+    var settled = false;
+    function finishExport(){
+      exportInProgress = false;
+      downloadBtnEl.classList.remove('active');
+      downloadBtnEl.style.opacity = '';
+    }
+    var timeoutId = setTimeout(function(){
+      if(settled) return;
+      settled = true;
+      finishExport();
       restoreSwaps();
-      var link = document.createElement('a');
-      link.download = 'cyber-diary-spread-' + (currentPage+1) + '.png';
-      link.href = canvas.toDataURL('image/png');
-      link.click();
+      alert('이미지 저장이 너무 오래 걸려서 취소했어요. 다시 시도해보거나, 그래도 안 되면 다른 브라우저(Chrome 등)로 열어서 시도해보세요.');
+      if(wasSelected) selectElement(wasSelected);
+    }, 15000);
+    html2canvas(stage, {backgroundColor:null, scale:exportScale, useCORS:true}).then(function(rawCanvas){
+      if(settled) return;
+      settled = true;
+      finishExport();
+      clearTimeout(timeoutId);
+      restoreSwaps();
+      var canvas = rawCanvas;
+      if(rawCanvas.width > expectedW || rawCanvas.height > expectedH){
+        canvas = document.createElement('canvas');
+        canvas.width = expectedW;
+        canvas.height = expectedH;
+        canvas.getContext('2d').drawImage(rawCanvas, 0, 0);
+      }
+      var rightTrim = 16;
+      if(rightTrim > 0 && canvas.width > rightTrim){
+        var trimmed = document.createElement('canvas');
+        trimmed.width = canvas.width - rightTrim;
+        trimmed.height = canvas.height;
+        trimmed.getContext('2d').drawImage(canvas, 0, 0);
+        canvas = trimmed;
+      }
+      var format = document.getElementById('exportFormatSelect').value;
+      if(format === 'gif'){
+        var blob = canvasToGifBlob(canvas);
+        var url = URL.createObjectURL(blob);
+        var link = document.createElement('a');
+        link.download = 'cyber-diary-spread-' + (currentPage+1) + '.gif';
+        link.href = url;
+        link.click();
+        setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+      } else {
+        var link2 = document.createElement('a');
+        link2.download = 'cyber-diary-spread-' + (currentPage+1) + '.png';
+        link2.href = canvas.toDataURL('image/png');
+        link2.click();
+      }
       if(wasSelected) selectElement(wasSelected);
     }).catch(function(){
+      if(settled) return;
+      settled = true;
+      finishExport();
+      clearTimeout(timeoutId);
       restoreSwaps();
       alert('이미지 저장 중 문제가 발생했어요.');
       if(wasSelected) selectElement(wasSelected);
@@ -2209,6 +2924,7 @@
   // ---------- crop modal ----------
   var cropTargetEl = null;
   var cropRectState = null;
+  var cropShapeMode = 'rect';
   var cropImageEl = document.getElementById('cropImage');
   function updateCropRectDisplay(){
     var rect = document.getElementById('cropRect');
@@ -2216,9 +2932,25 @@
     rect.style.top = cropRectState.y + 'px';
     rect.style.width = cropRectState.w + 'px';
     rect.style.height = cropRectState.h + 'px';
+    rect.style.borderRadius = cropShapeMode === 'circle' ? '50%' : '0';
   }
+  document.getElementById('cropShapeRectBtn').addEventListener('click', function(){
+    cropShapeMode = 'rect';
+    this.classList.add('active');
+    document.getElementById('cropShapeCircleBtn').classList.remove('active');
+    if(cropRectState) updateCropRectDisplay();
+  });
+  document.getElementById('cropShapeCircleBtn').addEventListener('click', function(){
+    cropShapeMode = 'circle';
+    this.classList.add('active');
+    document.getElementById('cropShapeRectBtn').classList.remove('active');
+    if(cropRectState) updateCropRectDisplay();
+  });
   function openCropModal(el){
     cropTargetEl = el;
+    cropShapeMode = 'rect';
+    document.getElementById('cropShapeRectBtn').classList.add('active');
+    document.getElementById('cropShapeCircleBtn').classList.remove('active');
     document.getElementById('cropModalOverlay').style.display = 'flex';
     cropImageEl.onload = function(){
       var iw = cropImageEl.clientWidth, ih = cropImageEl.clientHeight;
@@ -2241,7 +2973,15 @@
     var sw = Math.max(1, cropRectState.w*scaleX), sh = Math.max(1, cropRectState.h*scaleY);
     var canvas = document.createElement('canvas');
     canvas.width = sw; canvas.height = sh;
-    canvas.getContext('2d').drawImage(cropImageEl, sx, sy, sw, sh, 0, 0, sw, sh);
+    var ctx = canvas.getContext('2d');
+    ctx.drawImage(cropImageEl, sx, sy, sw, sh, 0, 0, sw, sh);
+    if(cropShapeMode === 'circle'){
+      ctx.globalCompositeOperation = 'destination-in';
+      ctx.beginPath();
+      ctx.ellipse(sw/2, sh/2, sw/2, sh/2, 0, 0, Math.PI*2);
+      ctx.fill();
+      ctx.globalCompositeOperation = 'source-over';
+    }
     var dataUrl = canvas.toDataURL('image/png');
     var targetEl = cropTargetEl;
     var newImg = new Image();
