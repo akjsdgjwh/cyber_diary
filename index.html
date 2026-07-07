@@ -1959,7 +1959,7 @@
         row.appendChild(mkRangeRow('두께', 2, 30, 1, el.frameWidth, function(v){ el.frameWidth=v; renderElements(); }));
       }
       var shadowBtn = document.createElement('button');
-      shadowBtn.innerHTML = '<span class="material-symbols-outlined">wb_shadow</span> 그림자';
+      shadowBtn.innerHTML = '<span class="material-symbols-outlined">blur_on</span> 그림자';
       if(el.shadow) shadowBtn.classList.add('active');
       shadowBtn.addEventListener('click', function(){ el.shadow = !el.shadow; renderElements(); renderSelPanel(); commit(); });
       row.appendChild(shadowBtn);
